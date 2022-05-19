@@ -28,7 +28,7 @@ import org.apache.nifi.registry.hook.EventField;
 import org.apache.nifi.registry.hook.WhitelistFilteringEventHookProvider;
 import org.apache.nifi.registry.provider.ProviderConfigurationContext;
 import org.apache.nifi.registry.provider.ProviderCreationException;
-import org.apache.nifi.registry.util.FileUtils;
+import org.apache.nifi.util.file.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -447,7 +447,7 @@ public class RunNiFi {
             fileDir = new File(nifiHome, defaultDirectory);
         }
 
-        FileUtils.ensureDirectoryExistAndCanAccess(fileDir);
+        FileUtils.ensureDirectoryExistAndCanReadAndWrite(fileDir);
         final File statusFile = new File(fileDir, fileName);
         logger.debug("Status File: {}", statusFile);
         return statusFile;

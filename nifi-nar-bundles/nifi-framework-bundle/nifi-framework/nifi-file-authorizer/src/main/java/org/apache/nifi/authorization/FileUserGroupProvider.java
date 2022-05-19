@@ -155,7 +155,7 @@ public class FileUserGroupProvider implements ConfigurableUserGroupProvider {
             final File restoreDirectory = properties.getRestoreDirectory();
             if (restoreDirectory != null) {
                 // sanity check that restore directory is a directory, creating it if necessary
-                FileUtils.ensureDirectoryExistAndCanAccess(restoreDirectory);
+                FileUtils.ensureDirectoryExistAndCanReadAndWrite(restoreDirectory);
 
                 // check that restore directory is not the same as the user's directory
                 if (tenantsFileDirectory.getAbsolutePath().equals(restoreDirectory.getAbsolutePath())) {

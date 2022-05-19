@@ -130,6 +130,11 @@ language governing permissions and limitations under the License. -->
             <artifactId>javax.annotation-api</artifactId>
             <version>1.3.2</version>
         </dependency>
+        <dependency>
+            <groupId>org.apache.nifi</groupId>
+            <artifactId>nifi-toolkit-status-history</artifactId>
+            <version>1.17.0-SNAPSHOT</version>
+        </dependency>
     </dependencies>
 
 

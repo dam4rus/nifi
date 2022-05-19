@@ -171,30 +171,30 @@ public class FileAuthorizerTest {
     public void setup() throws IOException {
         // primary authorizations
         primaryAuthorizations = new File("target/authorizations/authorizations.xml");
-        FileUtils.ensureDirectoryExistAndCanAccess(primaryAuthorizations.getParentFile());
+        FileUtils.ensureDirectoryExistAndCanReadAndWrite(primaryAuthorizations.getParentFile());
 
         // primary tenants
         primaryTenants = new File("target/authorizations/users.xml");
-        FileUtils.ensureDirectoryExistAndCanAccess(primaryTenants.getParentFile());
+        FileUtils.ensureDirectoryExistAndCanReadAndWrite(primaryTenants.getParentFile());
 
         // restore authorizations
         restoreAuthorizations = new File("target/restore/authorizations.xml");
-        FileUtils.ensureDirectoryExistAndCanAccess(restoreAuthorizations.getParentFile());
+        FileUtils.ensureDirectoryExistAndCanReadAndWrite(restoreAuthorizations.getParentFile());
 
         // restore authorizations
         restoreTenants = new File("target/restore/users.xml");
-        FileUtils.ensureDirectoryExistAndCanAccess(restoreTenants.getParentFile());
+        FileUtils.ensureDirectoryExistAndCanReadAndWrite(restoreTenants.getParentFile());
 
         flow = new File("src/test/resources/flow.xml.gz");
-        FileUtils.ensureDirectoryExistAndCanAccess(flow.getParentFile());
+        FileUtils.ensureDirectoryExistAndCanReadAndWrite(flow.getParentFile());
 
         flowJson = new File("src/test/resources/flow.json.gz");
 
         flowNoPorts = new File("src/test/resources/flow-no-ports.xml.gz");
-        FileUtils.ensureDirectoryExistAndCanAccess(flowNoPorts.getParentFile());
+        FileUtils.ensureDirectoryExistAndCanReadAndWrite(flowNoPorts.getParentFile());
 
         flowWithDns = new File("src/test/resources/flow-with-dns.xml.gz");
-        FileUtils.ensureDirectoryExistAndCanAccess(flowWithDns.getParentFile());
+        FileUtils.ensureDirectoryExistAndCanReadAndWrite(flowWithDns.getParentFile());
 
         properties = mock(NiFiProperties.class);
         when(properties.getRestoreDirectory()).thenReturn(restoreAuthorizations.getParentFile());

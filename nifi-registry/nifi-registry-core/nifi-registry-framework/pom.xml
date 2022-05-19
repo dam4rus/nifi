@@ -176,6 +176,12 @@
             <scope>provided</scope> <!-- will be in lib dir -->
         </dependency>
         <dependency>
+            <groupId>org.apache.nifi</groupId>
+            <artifactId>nifi-utils</artifactId>
+            <version>1.17.0-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>org.apache.nifi.registry</groupId>
             <artifactId>nifi-registry-utils</artifactId>
             <version>1.17.0-SNAPSHOT</version>

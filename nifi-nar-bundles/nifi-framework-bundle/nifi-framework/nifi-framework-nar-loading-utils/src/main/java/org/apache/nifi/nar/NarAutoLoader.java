@@ -17,7 +17,7 @@
 package org.apache.nifi.nar;
 
 import org.apache.nifi.security.util.TlsException;
-import org.apache.nifi.util.FileUtils;
+import org.apache.nifi.util.file.FileUtils;
 import org.apache.nifi.util.NiFiProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -100,11 +100,11 @@ public class FileUserGroupProviderTest {
     public void setup() throws IOException {
         // primary tenants
         primaryTenants = new File("target/authorizations/users.xml");
-        FileUtils.ensureDirectoryExistAndCanAccess(primaryTenants.getParentFile());
+        FileUtils.ensureDirectoryExistAndCanReadAndWrite(primaryTenants.getParentFile());
 
         // restore authorizations
         restoreTenants = new File("target/restore/users.xml");
-        FileUtils.ensureDirectoryExistAndCanAccess(restoreTenants.getParentFile());
+        FileUtils.ensureDirectoryExistAndCanReadAndWrite(restoreTenants.getParentFile());
 
         properties = mock(NiFiProperties.class);
         when(properties.getRestoreDirectory()).thenReturn(restoreTenants.getParentFile());

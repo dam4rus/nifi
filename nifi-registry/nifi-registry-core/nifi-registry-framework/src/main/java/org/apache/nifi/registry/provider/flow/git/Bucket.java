@@ -48,7 +48,7 @@ class Bucket {
 
     /**
      * Set the name of bucket directory.
-     * @param bucketDirName The directory name must be sanitized, use {@link org.apache.nifi.registry.util.FileUtils#sanitizeFilename(String)} to do so.
+     * @param bucketDirName The directory name must be sanitized, use {@link org.apache.nifi.util.file.FileUtils#sanitizeFilename(String)} to do so.
      */
     public void setBucketDirName(String bucketDirName) {
         this.bucketDirName = bucketDirName;

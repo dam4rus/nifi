@@ -16,7 +16,7 @@
  */
 package org.apache.nifi.controller.status.history;
 
-import org.apache.nifi.util.FileUtils;
+import org.apache.nifi.util.file.FileUtils;
 import org.apache.nifi.util.NiFiProperties;
 import org.junit.After;
 import org.junit.Before;

@@ -21,7 +21,7 @@ import org.apache.nifi.registry.properties.NiFiRegistryProperties;
 import org.apache.nifi.registry.security.crypto.BootstrapFileCryptoKeyProvider;
 import org.apache.nifi.registry.security.crypto.CryptoKeyProvider;
 import org.apache.nifi.registry.security.crypto.MissingCryptoKeyException;
-import org.apache.nifi.registry.util.FileUtils;
+import org.apache.nifi.util.file.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.bridge.SLF4JBridgeHandler;
@@ -100,7 +100,7 @@ public class NiFiRegistry {
         // the working directory, we can be assured that it will attempt to extract the
         // war every time the application starts.
         File webWorkingDir = properties.getWebWorkingDirectory();
-        FileUtils.deleteFilesInDirectory(webWorkingDir, null, LOGGER, true, true);
+        FileUtils.deleteFilesInDir(webWorkingDir, null, LOGGER, true, true);
         FileUtils.deleteFile(webWorkingDir, LOGGER, 3);
 
         // redirect JUL log events

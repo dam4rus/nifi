@@ -100,7 +100,7 @@ import org.apache.nifi.registry.flow.StandardFlowRegistryClient;
 import org.apache.nifi.reporting.BulletinRepository;
 import org.apache.nifi.scheduling.SchedulingStrategy;
 import org.apache.nifi.services.FlowService;
-import org.apache.nifi.util.FileUtils;
+import org.apache.nifi.util.file.FileUtils;
 import org.apache.nifi.util.NiFiProperties;
 import org.apache.nifi.web.revision.RevisionManager;
 import org.junit.After;

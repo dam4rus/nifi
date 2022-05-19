@@ -25,7 +25,7 @@ import io.questdb.cairo.sql.RecordCursor;
 import io.questdb.cairo.sql.RecordCursorFactory;
 import io.questdb.griffin.SqlExecutionContext;
 import org.apache.nifi.controller.status.history.questdb.QuestDbContext;
-import org.apache.nifi.util.FileUtils;
+import org.apache.nifi.util.file.FileUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;

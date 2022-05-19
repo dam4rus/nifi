@@ -76,15 +76,15 @@ public class FileUtils {
         }
     }
 
-    public static void ensureDirectoryExistAndCanAccess(final File dir) throws IOException {
-        if (dir.exists() && !dir.isDirectory()) {
-            throw new IOException(dir.getAbsolutePath() + " is not a directory");
-        } else if (!dir.exists()) {
-            final boolean made = dir.mkdirs();
-            if (!made) {
-                throw new IOException(dir.getAbsolutePath() + " could not be created");
-            }
+    public static void ensureDirectoryExistAndCanRead(final File dir) throws IOException {
+        ensureDirectoryExist(dir);
+        if (!dir.canRead()) {
+            throw new IOException(dir.getAbsolutePath() + " directory does not have read privilege");
         }
+    }
+
+    public static void ensureDirectoryExistAndCanReadAndWrite(final File dir) throws IOException {
+        ensureDirectoryExist(dir);
         if (!(dir.canRead() && dir.canWrite())) {
             throw new IOException(dir.getAbsolutePath() + " directory does not have read/write privilege");
         }
@@ -212,18 +212,18 @@ public class FileUtils {
      */
     public static void deleteFilesInDir(final File directory, final FilenameFilter filter, final Logger logger, final boolean recurse, final boolean deleteEmptyDirectories) {
         // ensure the specified directory is actually a directory and that it exists
-        if (null != directory && directory.isDirectory()) {
-            final File ingestFiles[] = directory.listFiles();
-            for (File ingestFile : ingestFiles) {
-                boolean process = (filter == null) ? true : filter.accept(directory, ingestFile.getName());
-                if (ingestFile.isFile() && process) {
+        if (null == directory || !directory.isDirectory()) {
+            return;
+        }
+        for (File ingestFile : directory.listFiles()) {
+            boolean process = filter == null || filter.accept(directory, ingestFile.getName());
+            if (ingestFile.isFile() && process) {
+                FileUtils.deleteFile(ingestFile, logger, 3);
+            }
+            if (ingestFile.isDirectory() && recurse) {
+                FileUtils.deleteFilesInDir(ingestFile, filter, logger, recurse, deleteEmptyDirectories);
+                if (deleteEmptyDirectories && ingestFile.list().length == 0) {
                     FileUtils.deleteFile(ingestFile, logger, 3);
-                }
-                if (ingestFile.isDirectory() && recurse) {
-                    FileUtils.deleteFilesInDir(ingestFile, filter, logger, recurse, deleteEmptyDirectories);
-                    if (deleteEmptyDirectories && ingestFile.list().length == 0) {
-                        FileUtils.deleteFile(ingestFile, logger, 3);
-                    }
                 }
             }
         }
@@ -582,4 +582,47 @@ public class FileUtils {
         return path.toFile().getUsableSpace();
     }
 
+    private static void ensureDirectoryExist(final File dir) throws IOException {
+        if (dir.exists() && !dir.isDirectory()) {
+            throw new IOException(dir.getAbsolutePath() + " is not a directory");
+        } else if (!dir.exists()) {
+            final boolean made = dir.mkdirs();
+            if (!made) {
+                throw new IOException(dir.getAbsolutePath() + " could not be created");
+            }
+        }
+    }
+
+    // The invalid character list is derived from this Stackoverflow page.
+    // https://stackoverflow.com/questions/1155107/is-there-a-cross-platform-java-method-to-remove-filename-special-chars
+    private final static int[] INVALID_CHARS = {34, 60, 62, 124, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+            16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 58, 42, 63, 92, 47, 32};
+
+    static {
+        Arrays.sort(INVALID_CHARS);
+    }
+
+    /**
+     * Replaces invalid characters for a file system name within a given filename string to underscore '_'.
+     * Be careful not to pass a file path as this method replaces path delimiter characters (i.e forward/back slashes).
+     * @param filename The filename to clean
+     * @return sanitized filename
+     */
+    public static String sanitizeFilename(String filename) {
+        if (filename == null || filename.isEmpty()) {
+            return filename;
+        }
+        int codePointCount = filename.codePointCount(0, filename.length());
+
+        final StringBuilder cleanName = new StringBuilder();
+        for (int i = 0; i < codePointCount; i++) {
+            int c = filename.codePointAt(i);
+            if (Arrays.binarySearch(INVALID_CHARS, c) < 0) {
+                cleanName.appendCodePoint(c);
+            } else {
+                cleanName.append('_');
+            }
+        }
+        return cleanName.toString();
+    }
 }

@@ -214,7 +214,7 @@ public class BootstrapFileProvider {
                 return new File(nifiHome, DEFAULT_PID_DIR);
             });
 
-        FileUtils.ensureDirectoryExistAndCanAccess(configFileDir);
+        FileUtils.ensureDirectoryExistAndCanReadAndWrite(configFileDir);
         File statusFile = new File(configFileDir, fileName);
         LOGGER.debug("Run File: {}", statusFile);
 

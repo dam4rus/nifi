@@ -16,6 +16,7 @@
  */
 package org.apache.nifi.controller.status.history;
 
+import java.util.Collection;
 import org.apache.nifi.controller.status.NodeStatus;
 import org.junit.Assert;
 import org.junit.Test;
@@ -79,6 +80,24 @@ public class EmbeddedQuestDbStatusHistoryRepositoryForComponentsTest extends Abs
         // when & then - requesting data from out of recorded range
         final StatusHistory rootGroupStatus2 = testSubject.getProcessGroupStatusHistory(ROOT_GROUP_ID, START, END_EARLY, PREFERRED_DATA_POINTS);
         assertStatusHistoryIsEmpty(rootGroupStatus2);
+
+        final Collection<String> processGroupIds = testSubject.getProcessGroupIds();
+        Assert.assertEquals(processGroupIds.size(), 2);
+        Assert.assertTrue(processGroupIds.contains(ROOT_GROUP_ID));
+        Assert.assertTrue(processGroupIds.contains(CHILD_GROUP_ID));
+
+        final Collection<String> processorIds = testSubject.getProcessorIds();
+        Assert.assertEquals(processorIds.size(), 2);
+        Assert.assertTrue(processorIds.contains(PROCESSOR_ID));
+        Assert.assertTrue(processorIds.contains(PROCESSOR_WITH_COUNTER_ID));
+
+        final Collection<String> connectionIds = testSubject.getConnectionIds();
+        Assert.assertEquals(connectionIds.size(), 1);
+        Assert.assertTrue(connectionIds.contains(CONNECTION_ID));
+
+        final Collection<String> remoteProcessGroupIds = testSubject.getRemoteProcessGroupIds();
+        Assert.assertEquals(remoteProcessGroupIds.size(), 1);
+        Assert.assertTrue(remoteProcessGroupIds.contains(REMOTE_PROCESS_GROUP_ID));
     }
 
     @Test

@@ -16,7 +16,7 @@
  */
 package org.apache.nifi.flow.resource;
 
-import org.apache.nifi.util.FileUtils;
+import org.apache.nifi.util.file.FileUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;

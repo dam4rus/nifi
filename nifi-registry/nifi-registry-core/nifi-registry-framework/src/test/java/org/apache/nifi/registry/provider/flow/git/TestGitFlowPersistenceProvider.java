@@ -22,7 +22,7 @@ import org.apache.nifi.registry.provider.ProviderConfigurationContext;
 import org.apache.nifi.registry.provider.ProviderCreationException;
 import org.apache.nifi.registry.provider.StandardProviderConfigurationContext;
 import org.apache.nifi.registry.provider.flow.StandardFlowSnapshotContext;
-import org.apache.nifi.registry.util.FileUtils;
+import org.apache.nifi.util.file.FileUtils;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.StoredConfig;

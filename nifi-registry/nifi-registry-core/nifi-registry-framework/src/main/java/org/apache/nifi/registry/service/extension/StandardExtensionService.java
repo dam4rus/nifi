@@ -65,7 +65,7 @@ import org.apache.nifi.registry.service.extension.docs.DocumentationConstants;
 import org.apache.nifi.registry.service.extension.docs.ExtensionDocWriter;
 import org.apache.nifi.registry.service.mapper.BucketMappings;
 import org.apache.nifi.registry.service.mapper.ExtensionMappings;
-import org.apache.nifi.registry.util.FileUtils;
+import org.apache.nifi.util.file.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

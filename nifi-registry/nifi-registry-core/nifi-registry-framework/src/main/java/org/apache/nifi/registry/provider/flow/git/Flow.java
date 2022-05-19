@@ -65,7 +65,7 @@ class Flow {
 
         /**
          * Create new FlowPointer instance.
-         * @param fileName The filename must be sanitized, use {@link org.apache.nifi.registry.util.FileUtils#sanitizeFilename(String)} to do so.
+         * @param fileName The filename must be sanitized, use {@link org.apache.nifi.util.file.FileUtils#sanitizeFilename(String)} to do so.
          */
         public FlowPointer(String fileName) {
             this.fileName = fileName;

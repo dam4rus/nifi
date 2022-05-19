@@ -24,7 +24,7 @@ import org.apache.nifi.registry.metadata.FlowMetadata;
 import org.apache.nifi.registry.metadata.FlowSnapshotMetadata;
 import org.apache.nifi.registry.provider.ProviderConfigurationContext;
 import org.apache.nifi.registry.provider.ProviderCreationException;
-import org.apache.nifi.registry.util.FileUtils;
+import org.apache.nifi.util.file.FileUtils;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,7 +41,7 @@ import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.apache.nifi.registry.util.FileUtils.sanitizeFilename;
+import static org.apache.nifi.util.file.FileUtils.sanitizeFilename;
 
 public class GitFlowPersistenceProvider implements MetadataAwareFlowPersistenceProvider {
 

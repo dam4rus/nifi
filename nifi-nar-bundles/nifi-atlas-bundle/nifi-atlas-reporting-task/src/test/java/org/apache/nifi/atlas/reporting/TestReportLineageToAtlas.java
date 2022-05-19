@@ -112,7 +112,7 @@ public class TestReportLineageToAtlas {
 
     private String createAtlasConfDir() throws IOException {
         String atlasConfDir = ATLAS_CONF_DIR_BASE + UUID.randomUUID();
-        FileUtils.ensureDirectoryExistAndCanAccess(new File(atlasConfDir));
+        FileUtils.ensureDirectoryExistAndCanReadAndWrite(new File(atlasConfDir));
         return atlasConfDir;
     }
 

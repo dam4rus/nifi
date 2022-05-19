@@ -93,7 +93,10 @@
         <property name="extensionManager" ref="extensionManager" />
     </bean>
 
-    <bean id="statusHistoryDumpFactory" class="org.apache.nifi.controller.status.history.JsonNodeStatusHistoryDumpFactory">
-        <property name="statusHistoryRepository" ref="statusHistoryRepository" />
+    <bean id="statusHistoryDumpFactory" class="org.apache.nifi.controller.status.history.JsonStatusHistoryDumpFactory" />
+
+    <bean id="statusHistoryDumper" class="org.apache.nifi.controller.status.history.StandardStatusHistoryDumper">
+        <constructor-arg ref="statusHistoryRepository" />
+        <constructor-arg ref="statusHistoryDumpFactory" />
     </bean>
 </beans>

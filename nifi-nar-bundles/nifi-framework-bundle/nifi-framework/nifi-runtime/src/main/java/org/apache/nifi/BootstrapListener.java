@@ -17,7 +17,6 @@
 package org.apache.nifi;
 
 import org.apache.nifi.controller.DecommissionTask;
-import org.apache.nifi.controller.status.history.StatusHistoryDump;
 import org.apache.nifi.diagnostics.DiagnosticsDump;
 import org.apache.nifi.util.LimitingInputStream;
 import org.slf4j.Logger;
@@ -243,7 +242,7 @@ public class BootstrapListener {
                                         logger.info("Received STATUS_HISTORY request from Bootstrap");
                                         final String[] statusHistoryArgs = request.getArgs();
                                         final int days = Integer.parseInt(statusHistoryArgs[0]);
-                                        writeNodeStatusHistory(socket.getOutputStream(), days);
+                                        nifi.getServer().getStatusHistoryDumper().dumpNodeStatusHistory(days, socket.getOutputStream());
                                         break;
                                     case IS_LOADED:
                                         logger.debug("Received IS_LOADED request from Bootstrap");
@@ -287,11 +286,6 @@ public class BootstrapListener {
     private void writeDiagnostics(final OutputStream out, final boolean verbose) throws IOException {
         final DiagnosticsDump diagnosticsDump = nifi.getServer().getDiagnosticsFactory().create(verbose);
         diagnosticsDump.writeTo(out);
-    }
-
-    private void writeNodeStatusHistory(final OutputStream out, final int days) throws IOException {
-        final StatusHistoryDump statusHistoryDump = nifi.getServer().getStatusHistoryDumpFactory().create(days);
-        statusHistoryDump.writeTo(out);
     }
 
     private void sendAnswer(final OutputStream out, final String answer) throws IOException {

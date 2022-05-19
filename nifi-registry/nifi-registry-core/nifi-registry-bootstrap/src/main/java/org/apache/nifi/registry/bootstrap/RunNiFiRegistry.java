@@ -18,7 +18,7 @@ package org.apache.nifi.registry.bootstrap;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.bootstrap.util.OSUtils;
-import org.apache.nifi.registry.util.FileUtils;
+import org.apache.nifi.util.file.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -262,7 +262,7 @@ public class RunNiFiRegistry {
             fileDir = new File(nifiHome, defaultDirectory);
         }
 
-        FileUtils.ensureDirectoryExistAndCanAccess(fileDir);
+        FileUtils.ensureDirectoryExistAndCanReadAndWrite(fileDir);
         final File statusFile = new File(fileDir, fileName);
         logger.debug("Status File: {}", statusFile);
         return statusFile;

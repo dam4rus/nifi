@@ -90,11 +90,11 @@
         </dependency>
         <dependency>
             <groupId>org.apache.nifi.registry</groupId>
-            <artifactId>nifi-registry-bootstrap</artifactId>
+            <artifactId>nifi-registry-runtime</artifactId>
         </dependency>
         <dependency>
             <groupId>org.apache.nifi.registry</groupId>
-            <artifactId>nifi-registry-runtime</artifactId>
+            <artifactId>nifi-registry-bootstrap</artifactId>
         </dependency>
         <dependency>
             <groupId>org.apache.nifi</groupId>

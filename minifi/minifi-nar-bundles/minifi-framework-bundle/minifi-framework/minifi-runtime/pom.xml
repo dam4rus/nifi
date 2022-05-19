@@ -38,11 +38,6 @@ limitations under the License.
         </dependency>
         <dependency>
             <groupId>org.apache.nifi</groupId>
-            <artifactId>nifi-utils</artifactId>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.nifi</groupId>
             <artifactId>nifi-runtime</artifactId>
             <exclusions>
                 <exclusion>

@@ -17,7 +17,7 @@
 package org.apache.nifi.flow.resource;
 
 import org.apache.nifi.nar.NarCloseable;
-import org.apache.nifi.util.FileUtils;
+import org.apache.nifi.util.file.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

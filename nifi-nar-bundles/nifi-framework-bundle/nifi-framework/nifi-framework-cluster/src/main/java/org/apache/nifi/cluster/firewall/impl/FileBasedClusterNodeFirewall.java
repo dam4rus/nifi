@@ -126,7 +126,7 @@ public class FileBasedClusterNodeFirewall implements ClusterNodeFirewall {
     private void syncWithRestoreDirectory() throws IOException {
 
         // sanity check that restore directory is a directory, creating it if necessary
-        FileUtils.ensureDirectoryExistAndCanAccess(restoreDirectory);
+        FileUtils.ensureDirectoryExistAndCanReadAndWrite(restoreDirectory);
 
         // check that restore directory is not the same as the primary directory
         if (config.getParentFile().getAbsolutePath().equals(restoreDirectory.getAbsolutePath())) {

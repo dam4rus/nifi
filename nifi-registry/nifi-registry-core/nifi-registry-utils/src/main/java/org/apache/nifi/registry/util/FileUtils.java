@@ -38,7 +38,9 @@ import org.slf4j.Logger;
  * A utility class containing a few useful static methods to do typical IO
  * operations.
  *
+ * @deprecated Use {@link org.apache.nifi.util.file.FileUtils}
  */
+@Deprecated
 public class FileUtils {
 
     public static final long TRANSFER_CHUNK_SIZE_BYTES = 1024 * 1024 * 8; //8 MB chunks

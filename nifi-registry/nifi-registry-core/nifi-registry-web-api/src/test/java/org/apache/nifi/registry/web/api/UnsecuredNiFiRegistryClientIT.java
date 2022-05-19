@@ -70,7 +70,7 @@ import org.apache.nifi.flow.VersionedProcessGroup;
 import org.apache.nifi.flow.VersionedProcessor;
 import org.apache.nifi.flow.VersionedPropertyDescriptor;
 import org.apache.nifi.registry.revision.entity.RevisionInfo;
-import org.apache.nifi.registry.util.FileUtils;
+import org.apache.nifi.util.file.FileUtils;
 import org.bouncycastle.util.encoders.Hex;
 import org.glassfish.jersey.media.multipart.MultiPartFeature;
 import org.junit.After;
