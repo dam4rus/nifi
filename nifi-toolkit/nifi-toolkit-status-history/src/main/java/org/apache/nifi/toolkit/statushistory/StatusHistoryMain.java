@@ -16,14 +16,9 @@
  */
 package org.apache.nifi.toolkit.statushistory;
 
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
@@ -31,6 +26,14 @@ import org.apache.nifi.controller.status.history.CsvStatusHistoryDumpFactory;
 import org.apache.nifi.controller.status.history.EmbeddedQuestDbStatusHistoryReader;
 import org.apache.nifi.controller.status.history.JsonStatusHistoryDumpFactory;
 import org.apache.nifi.controller.status.history.StandardStatusHistoryDumper;
+import org.apache.nifi.controller.status.history.StatusHistoryDumper;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 public class StatusHistoryMain {
 
@@ -38,36 +41,36 @@ public class StatusHistoryMain {
             .longOpt("help")
             .desc("Display help/usage info")
             .build();
-    private static final Option OPTION_FILE = Option.builder("f")
-            .longOpt("file")
-            .desc("Output file path")
+    private static final Option OPTION_OUTPUT_DIR = Option.builder("o")
+            .longOpt("output-dir")
+            .desc("Output directory path")
             .hasArg()
-            .argName("file-path")
+            .argName("output-dir")
             .required()
             .build();
     private static final Option OPTION_DAYS = Option.builder("d")
             .longOpt("days")
-            .desc("Days to collect history for")
+            .desc("How many days' status history should be collected. Defaults to 1")
             .hasArg()
             .optionalArg(true)
             .build();
     private static final Option OPTION_PERSIST_LOCATION = Option.builder("l")
             .longOpt("location")
-            .desc("Persist location")
+            .desc("Location of the persistent status repository (e.g. /var/lib/nifi/status_repository)")
             .hasArg()
             .required()
             .build();
-    private static final Option OPTION_JSON = Option.builder("json")
+    private static final Option OPTION_JSON = Option.builder()
             .longOpt("json")
             .desc("Export in JSON format (default)")
             .optionalArg(true)
             .build();
-    private static final Option OPTION_CSV = Option.builder("csv")
+    private static final Option OPTION_CSV = Option.builder()
             .longOpt("csv")
             .desc("Export in CSV format")
             .optionalArg(true)
             .build();
-    private static final Option OPTION_DUMP_COMPONENTS = Option.builder("dump_components")
+    private static final Option OPTION_DUMP_COMPONENTS = Option.builder()
             .longOpt("dump-components")
             .desc("Dump all components' status history as well")
             .optionalArg(true)
@@ -75,9 +78,13 @@ public class StatusHistoryMain {
 
     private static final Options OPTIONS = new Options();
 
+    private static final String HELP_HEADER = System.lineSeparator() + "A tool for exporting node and component status history." + System.lineSeparator() + System.lineSeparator();
+    private static final String HELP_FOOTER = System.lineSeparator() + "Java home: " +
+            System.getenv("JAVA_HOME") + System.lineSeparator() + "NiFi Toolkit home: " + System.getenv("NIFI_TOOLKIT_HOME");
+
     static {
         OPTIONS.addOption(OPTION_HELP);
-        OPTIONS.addOption(OPTION_FILE);
+        OPTIONS.addOption(OPTION_OUTPUT_DIR);
         OPTIONS.addOption(OPTION_DAYS);
         OPTIONS.addOption(OPTION_PERSIST_LOCATION);
         OPTIONS.addOption(OPTION_JSON);
@@ -85,77 +92,80 @@ public class StatusHistoryMain {
         OPTIONS.addOption(OPTION_DUMP_COMPONENTS);
     }
 
-    public static void main(String[] args) throws ParseException, IOException {
-        final CommandLine commandLine = new DefaultParser().parse(OPTIONS, args);
-        if (commandLine.hasOption(OPTION_HELP.getOpt())) {
-            // TODO: Implement
-        } else {
-            final String filePath = commandLine.getOptionValue(OPTION_FILE.getOpt());
-            final String persistLocation = commandLine.getOptionValue(OPTION_PERSIST_LOCATION.getOpt());
-            final int days = Optional.ofNullable(commandLine.getOptionValue(OPTION_DAYS.getOpt()))
-                    .map(Integer::parseInt)
-                    .orElse(1);
-            final boolean exportToJson = commandLine.hasOption(OPTION_JSON.getOpt()) || !commandLine.hasOption(OPTION_CSV.getOpt());
-            final boolean exportToCsv = commandLine.hasOption(OPTION_CSV.getOpt());
-            final boolean dumpComponents = commandLine.hasOption(OPTION_DUMP_COMPONENTS.getOpt());
-
-            final EmbeddedQuestDbStatusHistoryReader embeddedQuestDbStatusReader = new EmbeddedQuestDbStatusHistoryReader(Paths.get(persistLocation));
-            final List<StandardStatusHistoryDumper> statusHistoryDumpers = new ArrayList<>();
-            if (exportToJson) {
-                statusHistoryDumpers.add(new StandardStatusHistoryDumper(embeddedQuestDbStatusReader, new JsonStatusHistoryDumpFactory()));
-            }
-            if (exportToCsv) {
-                statusHistoryDumpers.add(new StandardStatusHistoryDumper(embeddedQuestDbStatusReader, new CsvStatusHistoryDumpFactory()));
-            }
-
-            for (final StandardStatusHistoryDumper statusHistoryDumper : statusHistoryDumpers) {
-                final String dumpFilePath = filePath + "_node_status." + statusHistoryDumper.getFileExtension();
-                try (final FileOutputStream outputStream = new FileOutputStream(dumpFilePath)) {
-                    System.out.println("Dumping node status history to file: " + dumpFilePath);
-                    statusHistoryDumper.dumpNodeStatusHistory(days, outputStream);
-                }
-            }
-            if (dumpComponents) {
-                for (final String processGroupId : embeddedQuestDbStatusReader.getProcessGroupIds()) {
-                    for (final StandardStatusHistoryDumper statusHistoryDumper : statusHistoryDumpers) {
-                        final String dumpFilePath = filePath + "_pg_" + processGroupId + "." + statusHistoryDumper.getFileExtension();
-                        try (final FileOutputStream outputStream = new FileOutputStream(dumpFilePath)) {
-                            System.out.println("Dumping process group with id " + processGroupId + " to file: " + dumpFilePath);
-                            statusHistoryDumper.dumpProcessGroupStatusHistory(processGroupId, days, outputStream);
-                        }
-                    }
-                }
-                for (final String processorId : embeddedQuestDbStatusReader.getProcessorIds()) {
-                    for (final StandardStatusHistoryDumper statusHistoryDumper : statusHistoryDumpers) {
-                        final String dumpFilePath = filePath + "_processor_" + processorId + "." + statusHistoryDumper.getFileExtension();
-                        try (final FileOutputStream outputStream = new FileOutputStream(dumpFilePath)) {
-                            System.out.println("Dumping processor with id " + processorId + " to file: " + dumpFilePath);
-                            statusHistoryDumper.dumpProcessorStatusHistory(processorId, days, outputStream);
-                        }
-                    }
-                }
-                for (final String connectionId : embeddedQuestDbStatusReader.getConnectionIds()) {
-                    for (final StandardStatusHistoryDumper statusHistoryDumper : statusHistoryDumpers) {
-                        final String dumpFilePath = filePath + "_connection_" + connectionId + "." + statusHistoryDumper.getFileExtension();
-                        try (final FileOutputStream outputStream = new FileOutputStream(dumpFilePath)) {
-                            System.out.println("Dumping connection with id " + connectionId + " to file: " + dumpFilePath);
-                            statusHistoryDumper.dumpConnectionStatusHistory(connectionId, days, outputStream);
-                        }
-                    }
-                }
-                for (final String remoteProcessGroupId : embeddedQuestDbStatusReader.getRemoteProcessGroupIds()) {
-                    for (final StandardStatusHistoryDumper statusHistoryDumper : statusHistoryDumpers) {
-                        final String dumpFilePath = filePath + "_rpg_" + remoteProcessGroupId + "." + statusHistoryDumper.getFileExtension();
-                        try (final FileOutputStream outputStream = new FileOutputStream(dumpFilePath)) {
-                            System.out.println("Dumping remote process group with id " + remoteProcessGroupId + " to file: " + dumpFilePath);
-                            statusHistoryDumper.dumpRemoteProcessGroupStatusHistory(remoteProcessGroupId, days, outputStream);
-                        }
-                    }
-                }
-            }
-
-            System.out.println("Successfully dumped status history to " + filePath);
+    public static void main(String[] args) throws IOException {
+        final CommandLine commandLine;
+        try {
+            commandLine = new DefaultParser().parse(OPTIONS, args);
+        } catch (ParseException e) {
+            System.err.println(e.getLocalizedMessage());
+            printHelp();
+            return;
         }
+
+        if (commandLine.hasOption(OPTION_HELP.getLongOpt())) {
+            printHelp();
+            return;
+        }
+
+        final String persistLocation = commandLine.getOptionValue(OPTION_PERSIST_LOCATION.getLongOpt());
+        if (isPersistLocationInvalid(persistLocation)) {
+            return;
+        }
+
+        final int days = Optional.ofNullable(commandLine.getOptionValue(OPTION_DAYS.getLongOpt()))
+                .map(Integer::parseInt)
+                .orElse(1);
+        if (days <= 0) {
+            System.err.println("Invalid argument: The number of days should be greater than 0");
+            return;
+        }
+
+        final String outputDirectory = commandLine.getOptionValue(OPTION_OUTPUT_DIR.getLongOpt());
+        new File(outputDirectory).mkdirs();
+
+        final boolean exportToJson = commandLine.hasOption(OPTION_JSON.getLongOpt()) || !commandLine.hasOption(OPTION_CSV.getLongOpt());
+        final boolean exportToCsv = commandLine.hasOption(OPTION_CSV.getLongOpt());
+        final boolean dumpComponents = commandLine.hasOption(OPTION_DUMP_COMPONENTS.getLongOpt());
+
+        final EmbeddedQuestDbStatusHistoryReader embeddedQuestDbStatusReader = new EmbeddedQuestDbStatusHistoryReader(Paths.get(persistLocation));
+        final List<StatusHistoryDumper> statusHistoryDumpers = new ArrayList<>();
+        if (exportToJson) {
+            statusHistoryDumpers.add(new StandardStatusHistoryDumper(embeddedQuestDbStatusReader, new JsonStatusHistoryDumpFactory()));
+        }
+        if (exportToCsv) {
+            statusHistoryDumpers.add(new StandardStatusHistoryDumper(embeddedQuestDbStatusReader, new CsvStatusHistoryDumpFactory()));
+        }
+
+        final StatusHistoryFileDumper dumper = new StatusHistoryFileDumper(statusHistoryDumpers, outputDirectory, days);
+        dumper.dumpNodeStatusHistory();
+
+        if (dumpComponents) {
+            dumper.dumpComponentStatusHistories(embeddedQuestDbStatusReader::getProcessGroupIds, "pg", StatusHistoryFileDumper::dumpProcessGroupStatusHistory);
+            dumper.dumpComponentStatusHistories(embeddedQuestDbStatusReader::getProcessorIds, "processor", StatusHistoryFileDumper::dumpProcessorStatusHistory);
+            dumper.dumpComponentStatusHistories(embeddedQuestDbStatusReader::getConnectionIds, "connection", StatusHistoryFileDumper::dumpConnectionStatusHistory);
+            dumper.dumpComponentStatusHistories(embeddedQuestDbStatusReader::getRemoteProcessGroupIds, "rpg", StatusHistoryFileDumper::dumpRemoteProcessGroupStatusHistory);
+        }
+
+        System.out.println("Successfully dumped status history to " + outputDirectory);
     }
 
+    private static boolean isPersistLocationInvalid(final String persistLocation) {
+        final File persistFile = new File(persistLocation);
+        if (!persistFile.exists()) {
+            System.err.println("Invalid persist location: Directory does not exists");
+            return true;
+        }
+        if (!persistFile.isDirectory()) {
+            System.err.println("Invalid persist location: Not a directory");
+            return true;
+        }
+        return false;
+    }
+
+    private static void printHelp() {
+        final HelpFormatter helpFormatter = new HelpFormatter();
+        helpFormatter.setWidth(160);
+        helpFormatter.setDescPadding(10);
+        helpFormatter.printHelp(StatusHistoryMain.class.getCanonicalName(), HELP_HEADER, OPTIONS, HELP_FOOTER);
+    }
 }
