@@ -20,7 +20,7 @@ package org.apache.nifi.controller.status.history;
 import java.io.IOException;
 import java.io.OutputStream;
 
-public interface StatusHistoryDumper {
+public interface StatusHistoryDumpService {
 
     void dumpNodeStatusHistory(final int days, final OutputStream os) throws IOException;
 

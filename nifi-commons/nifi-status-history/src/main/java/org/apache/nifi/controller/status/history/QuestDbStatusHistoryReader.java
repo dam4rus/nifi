@@ -41,7 +41,7 @@ import org.apache.nifi.controller.status.history.storage.questdb.QuestDbProcessG
 import org.apache.nifi.controller.status.history.storage.questdb.QuestDbProcessorStatusStorage;
 import org.apache.nifi.controller.status.history.storage.questdb.QuestDbRemoteProcessGroupStatusStorage;
 
-public class EmbeddedQuestDbStatusHistoryReader implements StatusHistoryReader {
+public class QuestDbStatusHistoryReader implements StatusHistoryReader {
 
     private final QuestDbContext dbContext;
     private final ProcessorStatusStorage processorStatusStorage;
@@ -51,11 +51,11 @@ public class EmbeddedQuestDbStatusHistoryReader implements StatusHistoryReader {
     private final NodeStatusStorage nodeStatusStorage;
     private final GarbageCollectionStatusStorage garbageCollectionStatusStorage;
 
-    public EmbeddedQuestDbStatusHistoryReader(final Path persistLocation) {
+    public QuestDbStatusHistoryReader(final Path persistLocation) {
         this(persistLocation, new InMemoryComponentDetailsStorage());
     }
 
-    public EmbeddedQuestDbStatusHistoryReader(final Path persistLocation, final InMemoryComponentDetailsStorage componentDetailsProvider) {
+    public QuestDbStatusHistoryReader(final Path persistLocation, final InMemoryComponentDetailsStorage componentDetailsProvider) {
         final CairoConfiguration configuration = new DefaultCairoConfiguration(persistLocation.toString());
         QuestDbDatabaseManager.checkDatabaseStatus(persistLocation);
 

@@ -25,8 +25,8 @@ import org.apache.nifi.controller.DecommissionTask;
 import org.apache.nifi.controller.UninheritableFlowException;
 import org.apache.nifi.controller.serialization.FlowSerializationException;
 import org.apache.nifi.controller.serialization.FlowSynchronizationException;
-import org.apache.nifi.controller.status.history.StatusHistoryDumper;
-import org.apache.nifi.controller.status.history.StandardStatusHistoryDumper;
+import org.apache.nifi.controller.status.history.StatusHistoryDumpService;
+import org.apache.nifi.controller.status.history.StandardStatusHistoryDumpService;
 import org.apache.nifi.diagnostics.DiagnosticsDump;
 import org.apache.nifi.diagnostics.DiagnosticsDumpElement;
 import org.apache.nifi.diagnostics.DiagnosticsFactory;
@@ -169,7 +169,7 @@ public class JettyServer implements NiFiServer, ExtensionUiLoader {
     private ExternalResourceProviderService narProviderService;
     private DiagnosticsFactory diagnosticsFactory;
     private DecommissionTask decommissionTask;
-    private StatusHistoryDumper statusHistoryDumper;
+    private StatusHistoryDumpService statusHistoryDumpService;
 
     private WebAppContext webApiContext;
     private WebAppContext webDocsContext;
@@ -855,7 +855,7 @@ public class JettyServer implements NiFiServer, ExtensionUiLoader {
 
                 diagnosticsFactory = webApplicationContext.getBean("diagnosticsFactory", DiagnosticsFactory.class);
                 decommissionTask = webApplicationContext.getBean("decommissionTask", DecommissionTask.class);
-                statusHistoryDumper = webApplicationContext.getBean("statusHistoryDumper", StandardStatusHistoryDumper.class);
+                statusHistoryDumpService = webApplicationContext.getBean("statusHistoryDumpService", StandardStatusHistoryDumpService.class);
             }
 
             // ensure the web document war was loaded and provide the extension mapping
@@ -970,8 +970,8 @@ public class JettyServer implements NiFiServer, ExtensionUiLoader {
     }
 
     @Override
-    public StatusHistoryDumper getStatusHistoryDumper() {
-        return statusHistoryDumper;
+    public StatusHistoryDumpService getStatusHistoryDumpService() {
+        return statusHistoryDumpService;
     }
 
 

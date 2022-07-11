@@ -23,10 +23,10 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.nifi.controller.status.history.CsvStatusHistoryDumpFactory;
-import org.apache.nifi.controller.status.history.EmbeddedQuestDbStatusHistoryReader;
+import org.apache.nifi.controller.status.history.QuestDbStatusHistoryReader;
 import org.apache.nifi.controller.status.history.JsonStatusHistoryDumpFactory;
-import org.apache.nifi.controller.status.history.StandardStatusHistoryDumper;
-import org.apache.nifi.controller.status.history.StatusHistoryDumper;
+import org.apache.nifi.controller.status.history.StandardStatusHistoryDumpService;
+import org.apache.nifi.controller.status.history.StatusHistoryDumpService;
 
 import java.io.File;
 import java.io.IOException;
@@ -127,13 +127,13 @@ public class StatusHistoryMain {
         final boolean exportToCsv = commandLine.hasOption(OPTION_CSV.getLongOpt());
         final boolean dumpComponents = commandLine.hasOption(OPTION_DUMP_COMPONENTS.getLongOpt());
 
-        final EmbeddedQuestDbStatusHistoryReader embeddedQuestDbStatusReader = new EmbeddedQuestDbStatusHistoryReader(Paths.get(persistLocation));
-        final List<StatusHistoryDumper> statusHistoryDumpers = new ArrayList<>();
+        final QuestDbStatusHistoryReader embeddedQuestDbStatusReader = new QuestDbStatusHistoryReader(Paths.get(persistLocation));
+        final List<StatusHistoryDumpService> statusHistoryDumpers = new ArrayList<>();
         if (exportToJson) {
-            statusHistoryDumpers.add(new StandardStatusHistoryDumper(embeddedQuestDbStatusReader, new JsonStatusHistoryDumpFactory()));
+            statusHistoryDumpers.add(new StandardStatusHistoryDumpService(embeddedQuestDbStatusReader, new JsonStatusHistoryDumpFactory()));
         }
         if (exportToCsv) {
-            statusHistoryDumpers.add(new StandardStatusHistoryDumper(embeddedQuestDbStatusReader, new CsvStatusHistoryDumpFactory()));
+            statusHistoryDumpers.add(new StandardStatusHistoryDumpService(embeddedQuestDbStatusReader, new CsvStatusHistoryDumpFactory()));
         }
 
         final StatusHistoryFileDumper dumper = new StatusHistoryFileDumper(statusHistoryDumpers, outputDirectory, days);

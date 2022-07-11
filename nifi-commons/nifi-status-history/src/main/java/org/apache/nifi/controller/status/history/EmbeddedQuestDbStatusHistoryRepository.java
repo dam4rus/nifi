@@ -52,7 +52,7 @@ public class EmbeddedQuestDbStatusHistoryRepository implements StatusHistoryRepo
     private final ScheduledExecutorService scheduledExecutorService = Executors
             .newScheduledThreadPool(3, new BasicThreadFactory.Builder().namingPattern("EmbeddedQuestDbStatusHistoryRepositoryWorker-%d").build());
 
-    private final EmbeddedQuestDbStatusHistoryReader embeddedQuestDbStatusReader;
+    private final QuestDbStatusHistoryReader embeddedQuestDbStatusReader;
 
     private final long persistFrequency;
     private final int daysToKeepNodeData;
@@ -88,7 +88,7 @@ public class EmbeddedQuestDbStatusHistoryRepository implements StatusHistoryRepo
     }
 
     EmbeddedQuestDbStatusHistoryRepository(final NiFiProperties niFiProperties, final long persistFrequency) {
-        embeddedQuestDbStatusReader = new EmbeddedQuestDbStatusHistoryReader(niFiProperties.getQuestDbStatusRepositoryPath(), componentDetailsProvider);
+        embeddedQuestDbStatusReader = new QuestDbStatusHistoryReader(niFiProperties.getQuestDbStatusRepositoryPath(), componentDetailsProvider);
 
         this.persistFrequency = persistFrequency;
         daysToKeepNodeData = getDaysToKeepNodeData(niFiProperties);

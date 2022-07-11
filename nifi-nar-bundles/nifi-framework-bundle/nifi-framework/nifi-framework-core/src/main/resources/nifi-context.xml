@@ -95,7 +95,7 @@
 
     <bean id="statusHistoryDumpFactory" class="org.apache.nifi.controller.status.history.JsonStatusHistoryDumpFactory" />
 
-    <bean id="statusHistoryDumper" class="org.apache.nifi.controller.status.history.StandardStatusHistoryDumper">
+    <bean id="statusHistoryDumpService" class="org.apache.nifi.controller.status.history.StandardStatusHistoryDumpService">
         <constructor-arg ref="statusHistoryRepository" />
         <constructor-arg ref="statusHistoryDumpFactory" />
     </bean>

@@ -20,12 +20,12 @@ package org.apache.nifi.controller.status.history;
 import java.io.IOException;
 import java.io.OutputStream;
 
-public class StandardStatusHistoryDumper implements StatusHistoryDumper {
+public class StandardStatusHistoryDumpService implements StatusHistoryDumpService {
 
     private final StatusHistoryReader statusHistoryReader;
     private final StatusHistoryDumpFactory statusHistoryDumpFactory;
 
-    public StandardStatusHistoryDumper(final StatusHistoryReader statusHistoryReader, final StatusHistoryDumpFactory statusHistoryDumpFactory) {
+    public StandardStatusHistoryDumpService(final StatusHistoryReader statusHistoryReader, final StatusHistoryDumpFactory statusHistoryDumpFactory) {
         this.statusHistoryReader = statusHistoryReader;
         this.statusHistoryDumpFactory = statusHistoryDumpFactory;
     }
@@ -34,7 +34,7 @@ public class StandardStatusHistoryDumper implements StatusHistoryDumper {
     public void dumpNodeStatusHistory(final int days, final OutputStream os) throws IOException {
         final StatusHistoryDumpDateRange dateRange = new StatusHistoryDumpDateRange(days);
         final StatusHistory statusHistory = statusHistoryReader.getNodeStatusHistory(dateRange.getStart(), dateRange.getEnd());
-        dumpStatusHistory(statusHistoryDumpFactory, os, statusHistory);
+        dumpStatusHistory(os, statusHistory);
     }
 
     @Override
@@ -42,7 +42,7 @@ public class StandardStatusHistoryDumper implements StatusHistoryDumper {
             throws IOException {
         final StatusHistoryDumpDateRange dateRange = new StatusHistoryDumpDateRange(days);
         final StatusHistory statusHistory = statusHistoryReader.getProcessGroupStatusHistory(processGroupId, dateRange.getStart(), dateRange.getEnd(), Integer.MAX_VALUE);
-        dumpStatusHistory(statusHistoryDumpFactory, os, statusHistory);
+        dumpStatusHistory(os, statusHistory);
     }
 
     @Override
@@ -50,7 +50,7 @@ public class StandardStatusHistoryDumper implements StatusHistoryDumper {
             throws IOException {
         final StatusHistoryDumpDateRange dateRange = new StatusHistoryDumpDateRange(days);
         final StatusHistory statusHistory = statusHistoryReader.getProcessorStatusHistory(processorId, dateRange.getStart(), dateRange.getEnd(), Integer.MAX_VALUE, true);
-        dumpStatusHistory(statusHistoryDumpFactory, os, statusHistory);
+        dumpStatusHistory(os, statusHistory);
     }
 
     @Override
@@ -58,7 +58,7 @@ public class StandardStatusHistoryDumper implements StatusHistoryDumper {
             throws IOException {
         final StatusHistoryDumpDateRange dateRange = new StatusHistoryDumpDateRange(days);
         final StatusHistory statusHistory = statusHistoryReader.getConnectionStatusHistory(connectionId, dateRange.getStart(), dateRange.getEnd(), Integer.MAX_VALUE);
-        dumpStatusHistory(statusHistoryDumpFactory, os, statusHistory);
+        dumpStatusHistory(os, statusHistory);
     }
 
     @Override
@@ -66,7 +66,7 @@ public class StandardStatusHistoryDumper implements StatusHistoryDumper {
             throws IOException {
         final StatusHistoryDumpDateRange dateRange = new StatusHistoryDumpDateRange(days);
         final StatusHistory statusHistory = statusHistoryReader.getRemoteProcessGroupStatusHistory(remoteProcessGroupId, dateRange.getStart(), dateRange.getEnd(), Integer.MAX_VALUE);
-        dumpStatusHistory(statusHistoryDumpFactory, os, statusHistory);
+        dumpStatusHistory(os, statusHistory);
     }
 
     @Override
@@ -74,7 +74,7 @@ public class StandardStatusHistoryDumper implements StatusHistoryDumper {
         return statusHistoryDumpFactory.getFileExtension();
     }
 
-    private void dumpStatusHistory(final StatusHistoryDumpFactory statusHistoryDumpFactory, final OutputStream os, final StatusHistory statusHistory) throws IOException {
+    private void dumpStatusHistory(final OutputStream os, final StatusHistory statusHistory) throws IOException {
         statusHistoryDumpFactory.create(statusHistory).writeTo(os);
     }
 }

@@ -23,72 +23,72 @@ import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
-import org.apache.nifi.controller.status.history.StatusHistoryDumper;
+import org.apache.nifi.controller.status.history.StatusHistoryDumpService;
 
 public class StatusHistoryFileDumper {
 
-    final Collection<StatusHistoryDumper> statusHistoryDumpers;
+    final Collection<StatusHistoryDumpService> statusHistoryDumpServices;
     final String outputDirectory;
     final int days;
 
-    public StatusHistoryFileDumper(final Collection<StatusHistoryDumper> statusHistoryDumpers, final String outputDirectory, final int days) {
-        this.statusHistoryDumpers = statusHistoryDumpers;
+    public StatusHistoryFileDumper(final Collection<StatusHistoryDumpService> statusHistoryDumpService, final String outputDirectory, final int days) {
+        this.statusHistoryDumpServices = statusHistoryDumpService;
         this.outputDirectory = outputDirectory;
         this.days = days;
     }
 
     public void dumpNodeStatusHistory() throws IOException {
-        for (final StatusHistoryDumper statusHistoryDumper : statusHistoryDumpers) {
-            final String dumpFilePath = Paths.get(outputDirectory, "node_status." + statusHistoryDumper.getFileExtension()).toString();
+        for (final StatusHistoryDumpService statusHistoryDumpService : statusHistoryDumpServices) {
+            final String dumpFilePath = Paths.get(outputDirectory, "node_status." + statusHistoryDumpService.getFileExtension()).toString();
             try (final FileOutputStream outputStream = new FileOutputStream(dumpFilePath)) {
                 System.out.println("Dumping node status history to file: " + dumpFilePath);
-                statusHistoryDumper.dumpNodeStatusHistory(days, outputStream);
+                statusHistoryDumpService.dumpNodeStatusHistory(days, outputStream);
             }
         }
     }
 
     public void dumpComponentStatusHistories(final Supplier<Collection<String>> idsSupplier,
             final String componentType,
-            final BiConsumer<StatusHistoryDumper, ComponentDumpParameters> dumpFunction)
+            final BiConsumer<StatusHistoryDumpService, ComponentDumpParameters> dumpFunction)
                 throws IOException {
         for (final String id : idsSupplier.get()) {
-            for (final StatusHistoryDumper statusHistoryDumper : statusHistoryDumpers) {
-                final String dumpFilePath = Paths.get(outputDirectory, componentType + "_" + id + "." + statusHistoryDumper.getFileExtension()).toString();
+            for (final StatusHistoryDumpService statusHistoryDumpService : statusHistoryDumpServices) {
+                final String dumpFilePath = Paths.get(outputDirectory, componentType + "_" + id + "." + statusHistoryDumpService.getFileExtension()).toString();
                 try (final FileOutputStream outputStream = new FileOutputStream(dumpFilePath)) {
                     System.out.println("Dumping component status history to file: " + dumpFilePath);
-                    dumpFunction.accept(statusHistoryDumper, new ComponentDumpParameters(id, days, outputStream));
+                    dumpFunction.accept(statusHistoryDumpService, new ComponentDumpParameters(id, days, outputStream));
                 }
             }
         }
     }
 
-    public static void dumpProcessGroupStatusHistory(final StatusHistoryDumper statusHistoryDumper, final ComponentDumpParameters parameters) {
+    public static void dumpProcessGroupStatusHistory(final StatusHistoryDumpService statusHistoryDumpService, final ComponentDumpParameters parameters) {
         try {
-            statusHistoryDumper.dumpProcessGroupStatusHistory(parameters.id, parameters.days, parameters.outputStream);
+            statusHistoryDumpService.dumpProcessGroupStatusHistory(parameters.id, parameters.days, parameters.outputStream);
         } catch (IOException e) {
             throw new RuntimeException("Failed to dump process group status history", e);
         }
     }
 
-    public static void dumpProcessorStatusHistory(final StatusHistoryDumper statusHistoryDumper, final ComponentDumpParameters parameters) {
+    public static void dumpProcessorStatusHistory(final StatusHistoryDumpService statusHistoryDumpService, final ComponentDumpParameters parameters) {
         try {
-            statusHistoryDumper.dumpProcessorStatusHistory(parameters.id, parameters.days, parameters.outputStream);
+            statusHistoryDumpService.dumpProcessorStatusHistory(parameters.id, parameters.days, parameters.outputStream);
         } catch (IOException e) {
             throw new RuntimeException("Failed to dump processor status history", e);
         }
     }
 
-    public static void dumpConnectionStatusHistory(final StatusHistoryDumper statusHistoryDumper, final ComponentDumpParameters parameters) {
+    public static void dumpConnectionStatusHistory(final StatusHistoryDumpService statusHistoryDumpService, final ComponentDumpParameters parameters) {
         try {
-            statusHistoryDumper.dumpConnectionStatusHistory(parameters.id, parameters.days, parameters.outputStream);
+            statusHistoryDumpService.dumpConnectionStatusHistory(parameters.id, parameters.days, parameters.outputStream);
         } catch (IOException e) {
             throw new RuntimeException("Failed to dump connection status history", e);
         }
     }
 
-    public static void dumpRemoteProcessGroupStatusHistory(final StatusHistoryDumper statusHistoryDumper, final ComponentDumpParameters parameters) {
+    public static void dumpRemoteProcessGroupStatusHistory(final StatusHistoryDumpService statusHistoryDumpService, final ComponentDumpParameters parameters) {
         try {
-            statusHistoryDumper.dumpRemoteProcessGroupStatusHistory(parameters.id, parameters.days, parameters.outputStream);
+            statusHistoryDumpService.dumpRemoteProcessGroupStatusHistory(parameters.id, parameters.days, parameters.outputStream);
         } catch (IOException e) {
             throw new RuntimeException("Failed to dump remote process group status history", e);
         }

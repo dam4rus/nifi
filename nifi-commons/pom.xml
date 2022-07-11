@@ -63,7 +63,6 @@
         <module>nifi-site-to-site-client</module>
         <module>nifi-socket-utils</module>
         <module>nifi-status-history</module>
-        <module>nifi-status-history-api</module>
         <module>nifi-utils</module>
         <module>nifi-uuid5</module>
         <module>nifi-vault-utils</module>

@@ -242,7 +242,7 @@ public class BootstrapListener {
                                         logger.info("Received STATUS_HISTORY request from Bootstrap");
                                         final String[] statusHistoryArgs = request.getArgs();
                                         final int days = Integer.parseInt(statusHistoryArgs[0]);
-                                        nifi.getServer().getStatusHistoryDumper().dumpNodeStatusHistory(days, socket.getOutputStream());
+                                        nifi.getServer().getStatusHistoryDumpService().dumpNodeStatusHistory(days, socket.getOutputStream());
                                         break;
                                     case IS_LOADED:
                                         logger.debug("Received IS_LOADED request from Bootstrap");

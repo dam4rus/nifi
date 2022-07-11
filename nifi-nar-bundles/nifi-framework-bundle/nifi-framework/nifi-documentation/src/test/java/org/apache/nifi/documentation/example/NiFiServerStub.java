@@ -19,7 +19,7 @@ package org.apache.nifi.documentation.example;
 import org.apache.nifi.NiFiServer;
 import org.apache.nifi.bundle.Bundle;
 import org.apache.nifi.controller.DecommissionTask;
-import org.apache.nifi.controller.status.history.StatusHistoryDumper;
+import org.apache.nifi.controller.status.history.StatusHistoryDumpService;
 import org.apache.nifi.diagnostics.DiagnosticsFactory;
 import org.apache.nifi.nar.ExtensionMapping;
 import org.apache.nifi.util.NiFiProperties;
@@ -63,7 +63,7 @@ public class NiFiServerStub implements NiFiServer {
     }
 
     @Override
-    public StatusHistoryDumper getStatusHistoryDumper() {
+    public StatusHistoryDumpService getStatusHistoryDumpService() {
         return null;
     }
 }
