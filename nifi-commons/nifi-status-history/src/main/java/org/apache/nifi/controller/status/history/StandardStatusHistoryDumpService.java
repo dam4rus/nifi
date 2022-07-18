@@ -32,7 +32,7 @@ public class StandardStatusHistoryDumpService implements StatusHistoryDumpServic
 
     @Override
     public void dumpNodeStatusHistory(final int days, final OutputStream os) throws IOException {
-        final StatusHistoryDumpDateRange dateRange = new StatusHistoryDumpDateRange(days);
+        final DateRange dateRange = DateRange.daysBeforeToday(days);
         final StatusHistory statusHistory = statusHistoryReader.getNodeStatusHistory(dateRange.getStart(), dateRange.getEnd());
         dumpStatusHistory(os, statusHistory);
     }
@@ -40,7 +40,7 @@ public class StandardStatusHistoryDumpService implements StatusHistoryDumpServic
     @Override
     public void dumpProcessGroupStatusHistory(final String processGroupId, final int days, final OutputStream os)
             throws IOException {
-        final StatusHistoryDumpDateRange dateRange = new StatusHistoryDumpDateRange(days);
+        final DateRange dateRange = DateRange.daysBeforeToday(days);
         final StatusHistory statusHistory = statusHistoryReader.getProcessGroupStatusHistory(processGroupId, dateRange.getStart(), dateRange.getEnd(), Integer.MAX_VALUE);
         dumpStatusHistory(os, statusHistory);
     }
@@ -48,7 +48,7 @@ public class StandardStatusHistoryDumpService implements StatusHistoryDumpServic
     @Override
     public void dumpProcessorStatusHistory(final String processorId, final int days, final OutputStream os)
             throws IOException {
-        final StatusHistoryDumpDateRange dateRange = new StatusHistoryDumpDateRange(days);
+        final DateRange dateRange = DateRange.daysBeforeToday(days);
         final StatusHistory statusHistory = statusHistoryReader.getProcessorStatusHistory(processorId, dateRange.getStart(), dateRange.getEnd(), Integer.MAX_VALUE, true);
         dumpStatusHistory(os, statusHistory);
     }
@@ -56,7 +56,7 @@ public class StandardStatusHistoryDumpService implements StatusHistoryDumpServic
     @Override
     public void dumpConnectionStatusHistory(final String connectionId, final int days, final OutputStream os)
             throws IOException {
-        final StatusHistoryDumpDateRange dateRange = new StatusHistoryDumpDateRange(days);
+        final DateRange dateRange = DateRange.daysBeforeToday(days);
         final StatusHistory statusHistory = statusHistoryReader.getConnectionStatusHistory(connectionId, dateRange.getStart(), dateRange.getEnd(), Integer.MAX_VALUE);
         dumpStatusHistory(os, statusHistory);
     }
@@ -64,7 +64,7 @@ public class StandardStatusHistoryDumpService implements StatusHistoryDumpServic
     @Override
     public void dumpRemoteProcessGroupStatusHistory(final String remoteProcessGroupId, final int days, final OutputStream os)
             throws IOException {
-        final StatusHistoryDumpDateRange dateRange = new StatusHistoryDumpDateRange(days);
+        final DateRange dateRange = DateRange.daysBeforeToday(days);
         final StatusHistory statusHistory = statusHistoryReader.getRemoteProcessGroupStatusHistory(remoteProcessGroupId, dateRange.getStart(), dateRange.getEnd(), Integer.MAX_VALUE);
         dumpStatusHistory(os, statusHistory);
     }

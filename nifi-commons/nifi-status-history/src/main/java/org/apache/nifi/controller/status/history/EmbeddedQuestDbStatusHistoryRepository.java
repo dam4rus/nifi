@@ -16,7 +16,6 @@
  */
 package org.apache.nifi.controller.status.history;
 
-import java.util.Collection;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.nifi.controller.status.ConnectionStatus;
@@ -24,9 +23,12 @@ import org.apache.nifi.controller.status.NodeStatus;
 import org.apache.nifi.controller.status.ProcessGroupStatus;
 import org.apache.nifi.controller.status.ProcessorStatus;
 import org.apache.nifi.controller.status.RemoteProcessGroupStatus;
+import org.apache.nifi.controller.status.history.questdb.QuestDbContext;
 import org.apache.nifi.controller.status.history.questdb.QuestDbDatabaseManager;
 import org.apache.nifi.controller.status.history.storage.BufferedWriterFlushWorker;
 import org.apache.nifi.controller.status.history.storage.BufferedWriterForStatusStorage;
+import org.apache.nifi.controller.status.history.storage.StatusStorages;
+import org.apache.nifi.controller.status.history.storage.questdb.QuestDbStatusStoragesFactory;
 import org.apache.nifi.util.NiFiProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,7 +54,9 @@ public class EmbeddedQuestDbStatusHistoryRepository implements StatusHistoryRepo
     private final ScheduledExecutorService scheduledExecutorService = Executors
             .newScheduledThreadPool(3, new BasicThreadFactory.Builder().namingPattern("EmbeddedQuestDbStatusHistoryRepositoryWorker-%d").build());
 
-    private final QuestDbStatusHistoryReader embeddedQuestDbStatusReader;
+    private final QuestDbContext dbContext;
+    private final StatusStorages statusStorages;
+    private final StatusHistoryReader statusHistoryReader;
 
     private final long persistFrequency;
     private final int daysToKeepNodeData;
@@ -73,7 +77,9 @@ public class EmbeddedQuestDbStatusHistoryRepository implements StatusHistoryRepo
         daysToKeepNodeData = -1;
         daysToKeepComponentData = -1;
 
-        embeddedQuestDbStatusReader = null;
+        dbContext = null;
+        statusStorages = null;
+        statusHistoryReader = null;
 
         processorStatusWriter = null;
         connectionStatusWriter = null;
@@ -88,18 +94,20 @@ public class EmbeddedQuestDbStatusHistoryRepository implements StatusHistoryRepo
     }
 
     EmbeddedQuestDbStatusHistoryRepository(final NiFiProperties niFiProperties, final long persistFrequency) {
-        embeddedQuestDbStatusReader = new QuestDbStatusHistoryReader(niFiProperties.getQuestDbStatusRepositoryPath(), componentDetailsProvider);
+        dbContext = QuestDbContext.ofPersistLocation(niFiProperties.getQuestDbStatusRepositoryPath());
+        statusStorages = QuestDbStatusStoragesFactory.create(dbContext, componentDetailsProvider);
+        statusHistoryReader = new StatusStoragesHistoryReader(statusStorages);
 
         this.persistFrequency = persistFrequency;
         daysToKeepNodeData = getDaysToKeepNodeData(niFiProperties);
         daysToKeepComponentData = getDaysToKeepComponentData(niFiProperties);
 
-        nodeStatusWriter = new BufferedWriterForStatusStorage<>(embeddedQuestDbStatusReader.getNodeStatusStorage(), PERSIST_BATCH_SIZE);
-        garbageCollectionStatusWriter = new BufferedWriterForStatusStorage<>(embeddedQuestDbStatusReader.getGarbageCollectionStatusStorage(), PERSIST_BATCH_SIZE);
-        processorStatusWriter = new BufferedWriterForStatusStorage<>(embeddedQuestDbStatusReader.getProcessorStatusStorage(), PERSIST_BATCH_SIZE);
-        connectionStatusWriter = new BufferedWriterForStatusStorage<>(embeddedQuestDbStatusReader.getConnectionStatusStorage(), PERSIST_BATCH_SIZE);
-        processGroupStatusWriter = new BufferedWriterForStatusStorage<>(embeddedQuestDbStatusReader.getProcessGroupStatusStorage(), PERSIST_BATCH_SIZE);
-        remoteProcessGroupStatusWriter = new BufferedWriterForStatusStorage<>(embeddedQuestDbStatusReader.getRemoteProcessGroupStatusStorage(), PERSIST_BATCH_SIZE);
+        nodeStatusWriter = new BufferedWriterForStatusStorage<>(statusStorages.getNodeStatusStorage(), PERSIST_BATCH_SIZE);
+        garbageCollectionStatusWriter = new BufferedWriterForStatusStorage<>(statusStorages.getGarbageCollectionStatusStorage(), PERSIST_BATCH_SIZE);
+        processorStatusWriter = new BufferedWriterForStatusStorage<>(statusStorages.getProcessorStatusStorage(), PERSIST_BATCH_SIZE);
+        connectionStatusWriter = new BufferedWriterForStatusStorage<>(statusStorages.getConnectionStatusStorage(), PERSIST_BATCH_SIZE);
+        processGroupStatusWriter = new BufferedWriterForStatusStorage<>(statusStorages.getProcessGroupStatusStorage(), PERSIST_BATCH_SIZE);
+        remoteProcessGroupStatusWriter = new BufferedWriterForStatusStorage<>(statusStorages.getRemoteProcessGroupStatusStorage(), PERSIST_BATCH_SIZE);
     }
 
     @Override
@@ -108,10 +116,10 @@ public class EmbeddedQuestDbStatusHistoryRepository implements StatusHistoryRepo
 
         final EmbeddedQuestDbRolloverHandler nodeRolloverHandler = new EmbeddedQuestDbRolloverHandler(QuestDbDatabaseManager.getNodeTableNames(),
                 daysToKeepNodeData,
-                embeddedQuestDbStatusReader.getDbContext());
+                dbContext);
         final EmbeddedQuestDbRolloverHandler componentRolloverHandler = new EmbeddedQuestDbRolloverHandler(QuestDbDatabaseManager.getComponentTableNames(),
                 daysToKeepComponentData,
-                embeddedQuestDbStatusReader.getDbContext());
+                dbContext);
         final BufferedWriterFlushWorker writer = new BufferedWriterFlushWorker(Arrays.asList(
             nodeStatusWriter,
             garbageCollectionStatusWriter,
@@ -132,7 +140,7 @@ public class EmbeddedQuestDbStatusHistoryRepository implements StatusHistoryRepo
     public void shutdown() {
         LOGGER.debug("Status history repository started to shut down");
         scheduledExecutorService.shutdown();
-        embeddedQuestDbStatusReader.getDbContext().close();
+        dbContext.close();
         LOGGER.debug("Status history repository has been shut down");
     }
 
@@ -188,52 +196,32 @@ public class EmbeddedQuestDbStatusHistoryRepository implements StatusHistoryRepo
 
     @Override
     public StatusHistory getConnectionStatusHistory(final String connectionId, final Date start, final Date end, final int preferredDataPoints) {
-        return embeddedQuestDbStatusReader.getConnectionStatusHistory(connectionId, start, end, preferredDataPoints);
+        return statusHistoryReader.getConnectionStatusHistory(connectionId, start, end, preferredDataPoints);
     }
 
     @Override
     public StatusHistory getProcessGroupStatusHistory(final String processGroupId, final Date start, final Date end, final int preferredDataPoints) {
-        return embeddedQuestDbStatusReader.getProcessGroupStatusHistory(processGroupId, start, end, preferredDataPoints);
+        return statusHistoryReader.getProcessGroupStatusHistory(processGroupId, start, end, preferredDataPoints);
     }
 
     @Override
     public StatusHistory getProcessorStatusHistory(final String processorId, final Date start, final Date end, final int preferredDataPoints, final boolean includeCounters) {
-        return embeddedQuestDbStatusReader.getProcessorStatusHistory(processorId, start, end, preferredDataPoints, includeCounters);
+        return statusHistoryReader.getProcessorStatusHistory(processorId, start, end, preferredDataPoints, includeCounters);
     }
 
     @Override
     public StatusHistory getRemoteProcessGroupStatusHistory(final String remoteGroupId, final Date start, final Date end, final int preferredDataPoints) {
-        return embeddedQuestDbStatusReader.getRemoteProcessGroupStatusHistory(remoteGroupId, start, end, preferredDataPoints);
+        return statusHistoryReader.getRemoteProcessGroupStatusHistory(remoteGroupId, start, end, preferredDataPoints);
     }
 
     @Override
     public GarbageCollectionHistory getGarbageCollectionHistory(final Date start, final Date end) {
-        return embeddedQuestDbStatusReader.getGarbageCollectionHistory(start, end);
+        return statusHistoryReader.getGarbageCollectionHistory(start, end);
     }
 
     @Override
     public StatusHistory getNodeStatusHistory(final Date start, final Date end) {
-        return embeddedQuestDbStatusReader.getNodeStatusHistory(start, end);
-    }
-
-    @Override
-    public Collection<String> getProcessGroupIds() {
-        return embeddedQuestDbStatusReader.getProcessGroupIds();
-    }
-
-    @Override
-    public Collection<String> getProcessorIds() {
-        return embeddedQuestDbStatusReader.getProcessorIds();
-    }
-
-    @Override
-    public Collection<String> getConnectionIds() {
-        return embeddedQuestDbStatusReader.getConnectionIds();
-    }
-
-    @Override
-    public Collection<String> getRemoteProcessGroupIds() {
-        return embeddedQuestDbStatusReader.getRemoteProcessGroupIds();
+        return statusHistoryReader.getNodeStatusHistory(start, end);
     }
 
     private Integer getDaysToKeepNodeData(final NiFiProperties niFiProperties) {

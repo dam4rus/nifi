@@ -18,12 +18,21 @@ package org.apache.nifi.controller.status.history.questdb;
 
 import io.questdb.cairo.CairoConfiguration;
 import io.questdb.cairo.CairoEngine;
+import io.questdb.cairo.DefaultCairoConfiguration;
 import io.questdb.griffin.SqlCompiler;
 import io.questdb.griffin.SqlExecutionContext;
 import io.questdb.griffin.SqlExecutionContextImpl;
+import java.nio.file.Path;
 
 public class QuestDbContext {
     private final CairoEngine engine;
+
+    public static QuestDbContext ofPersistLocation(final Path persistLocation) {
+        final CairoConfiguration configuration = new DefaultCairoConfiguration(persistLocation.toString());
+        QuestDbDatabaseManager.checkDatabaseStatus(persistLocation);
+
+        return new QuestDbContext(new CairoEngine(configuration));
+    }
 
     public QuestDbContext(final CairoEngine engine) {
         this.engine = engine;

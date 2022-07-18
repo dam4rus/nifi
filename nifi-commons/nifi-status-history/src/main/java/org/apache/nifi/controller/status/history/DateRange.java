@@ -22,20 +22,26 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.Date;
 
-public class StatusHistoryDumpDateRange {
+public class DateRange {
 
     private final Date start;
     private final Date end;
 
-    public StatusHistoryDumpDateRange(final int days) {
+    public DateRange(Date start, Date end) {
+        this.start = start;
+        this.end = end;
+    }
+
+    public static DateRange daysBeforeToday(final int days) {
         if (days <= 0) {
             throw new IllegalArgumentException(String.format("The number of days shall be greater than 0. The current value is %s.", days));
         }
         final LocalDateTime endOfToday = LocalDateTime.now().with(LocalTime.MAX);
         final LocalDateTime startOfDaysBefore = endOfToday.minusDays(days).with(LocalTime.MIN);
 
-        start = Date.from(startOfDaysBefore.atZone(ZoneId.systemDefault()).toInstant());
-        end = Date.from(endOfToday.atZone(ZoneId.systemDefault()).toInstant());
+        final Date start = Date.from(startOfDaysBefore.atZone(ZoneId.systemDefault()).toInstant());
+        final Date end = Date.from(endOfToday.atZone(ZoneId.systemDefault()).toInstant());
+        return new DateRange(start, end);
     }
 
     public Date getStart() {

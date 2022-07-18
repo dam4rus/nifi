@@ -88,6 +88,7 @@
             <groupId>org.apache.nifi.registry</groupId>
             <artifactId>nifi-registry-utils</artifactId>
         </dependency>
+        <!-- The order of dependencies matter here because nifi-utils.jar could end up in the wrong directory otherwise (required in both lib and lib/bootstrap) -->
         <dependency>
             <groupId>org.apache.nifi.registry</groupId>
             <artifactId>nifi-registry-runtime</artifactId>

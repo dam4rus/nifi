@@ -22,23 +22,23 @@ import static org.junit.Assert.assertEquals;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class StatusHistoryDumpDateRangeTest {
+public class DateRangeTest {
 
     private static final String EXPECTED_EXCEPTION_MESSAGE = "The number of days shall be greater than 0. The current value is %s.";
 
     @Test
-    public void testStatusHistoryDumpDateRangeWithZeroOrNegativeDays() {
+    public void testDaysBeforeTodayDateRangeWithZeroOrNegativeDays() {
         final int zeroDays = 0;
         final int negativeDays = -1;
 
         final IllegalArgumentException zeroDaysException = Assert.assertThrows(IllegalArgumentException.class,
-                () -> new StatusHistoryDumpDateRange(zeroDays)
+                () -> DateRange.daysBeforeToday(zeroDays)
         );
 
         assertEquals(String.format(EXPECTED_EXCEPTION_MESSAGE, zeroDays), zeroDaysException.getMessage());
 
         final IllegalArgumentException negativeDaysException = Assert.assertThrows(IllegalArgumentException.class,
-                () -> new StatusHistoryDumpDateRange(negativeDays)
+                () -> DateRange.daysBeforeToday(negativeDays)
         );
 
         assertEquals(String.format(EXPECTED_EXCEPTION_MESSAGE, negativeDays), negativeDaysException.getMessage());

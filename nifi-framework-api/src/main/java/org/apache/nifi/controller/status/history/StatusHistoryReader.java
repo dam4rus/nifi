@@ -17,7 +17,6 @@
 
 package org.apache.nifi.controller.status.history;
 
-import java.util.Collection;
 import java.util.Date;
 
 public interface StatusHistoryReader {
@@ -123,12 +122,4 @@ public interface StatusHistoryReader {
      * about the garbage collection of the given node within the specified time range
      */
     GarbageCollectionHistory getGarbageCollectionHistory(Date start, Date end);
-
-    Collection<String> getProcessGroupIds();
-
-    Collection<String> getProcessorIds();
-
-    Collection<String> getConnectionIds();
-
-    Collection<String> getRemoteProcessGroupIds();
 }

@@ -37,8 +37,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-import java.util.Collection;
-import java.util.Collections;
 
 public class VolatileComponentStatusRepository implements StatusHistoryRepository {
 
@@ -248,26 +246,6 @@ public class VolatileComponentStatusRepository implements StatusHistoryRepositor
         }
 
         return new StandardStatusHistory(snapshots, new HashMap<>(), new Date());
-    }
-
-    @Override
-    public Collection<String> getProcessGroupIds() {
-        return Collections.emptyList();
-    }
-
-    @Override
-    public Collection<String> getProcessorIds() {
-        return Collections.emptyList();
-    }
-
-    @Override
-    public Collection<String> getConnectionIds() {
-        return Collections.emptyList();
-    }
-
-    @Override
-    public Collection<String> getRemoteProcessGroupIds() {
-        return Collections.emptyList();
     }
 
     // Descriptors for node status

@@ -23,10 +23,9 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.nifi.controller.status.history.CsvStatusHistoryDumpFactory;
-import org.apache.nifi.controller.status.history.QuestDbStatusHistoryReader;
+import org.apache.nifi.controller.status.history.StatusHistoryDumpFactory;
+import org.apache.nifi.controller.status.history.StatusStoragesHistoryReader;
 import org.apache.nifi.controller.status.history.JsonStatusHistoryDumpFactory;
-import org.apache.nifi.controller.status.history.StandardStatusHistoryDumpService;
-import org.apache.nifi.controller.status.history.StatusHistoryDumpService;
 
 import java.io.File;
 import java.io.IOException;
@@ -34,6 +33,9 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import org.apache.nifi.controller.status.history.questdb.QuestDbContext;
+import org.apache.nifi.controller.status.history.storage.StatusStorages;
+import org.apache.nifi.controller.status.history.storage.questdb.QuestDbStatusStoragesFactory;
 
 public class StatusHistoryMain {
 
@@ -127,23 +129,21 @@ public class StatusHistoryMain {
         final boolean exportToCsv = commandLine.hasOption(OPTION_CSV.getLongOpt());
         final boolean dumpComponents = commandLine.hasOption(OPTION_DUMP_COMPONENTS.getLongOpt());
 
-        final QuestDbStatusHistoryReader embeddedQuestDbStatusReader = new QuestDbStatusHistoryReader(Paths.get(persistLocation));
-        final List<StatusHistoryDumpService> statusHistoryDumpers = new ArrayList<>();
+        final List<StatusHistoryDumpFactory> dumpFactories = new ArrayList<>();
         if (exportToJson) {
-            statusHistoryDumpers.add(new StandardStatusHistoryDumpService(embeddedQuestDbStatusReader, new JsonStatusHistoryDumpFactory()));
+            dumpFactories.add(new JsonStatusHistoryDumpFactory());
         }
         if (exportToCsv) {
-            statusHistoryDumpers.add(new StandardStatusHistoryDumpService(embeddedQuestDbStatusReader, new CsvStatusHistoryDumpFactory()));
+            dumpFactories.add(new CsvStatusHistoryDumpFactory());
         }
 
-        final StatusHistoryFileDumper dumper = new StatusHistoryFileDumper(statusHistoryDumpers, outputDirectory, days);
+        final QuestDbContext questDbContext = QuestDbContext.ofPersistLocation(Paths.get(persistLocation));
+        final StatusStorages statusStorages = QuestDbStatusStoragesFactory.create(questDbContext);
+        final StatusStoragesHistoryReader statusStoragesHistoryReader = new StatusStoragesHistoryReader(statusStorages);
+        final StatusHistoryFileDumper dumper = new StatusHistoryFileDumper(statusStoragesHistoryReader, dumpFactories, outputDirectory, days);
         dumper.dumpNodeStatusHistory();
-
         if (dumpComponents) {
-            dumper.dumpComponentStatusHistories(embeddedQuestDbStatusReader::getProcessGroupIds, "pg", StatusHistoryFileDumper::dumpProcessGroupStatusHistory);
-            dumper.dumpComponentStatusHistories(embeddedQuestDbStatusReader::getProcessorIds, "processor", StatusHistoryFileDumper::dumpProcessorStatusHistory);
-            dumper.dumpComponentStatusHistories(embeddedQuestDbStatusReader::getConnectionIds, "connection", StatusHistoryFileDumper::dumpConnectionStatusHistory);
-            dumper.dumpComponentStatusHistories(embeddedQuestDbStatusReader::getRemoteProcessGroupIds, "rpg", StatusHistoryFileDumper::dumpRemoteProcessGroupStatusHistory);
+            dumper.dumpComponentsStatusHistories();
         }
 
         System.out.println("Successfully dumped status history to " + outputDirectory);
