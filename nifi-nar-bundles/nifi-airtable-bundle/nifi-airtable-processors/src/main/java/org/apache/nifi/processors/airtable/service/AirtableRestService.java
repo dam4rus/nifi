@@ -17,18 +17,15 @@
 
 package org.apache.nifi.processors.airtable.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
-import java.util.Collection;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
+import okhttp3.Request;
 import okhttp3.Response;
 import org.apache.nifi.processor.exception.ProcessException;
-import org.apache.nifi.processors.airtable.model.v0.AirtableRecord;
-import okhttp3.Request;
-import org.apache.nifi.processors.airtable.model.v0.AirtableRecords;
 
 public class AirtableRestService {
 
@@ -48,13 +45,28 @@ public class AirtableRestService {
         this.httpClient = new OkHttpClient();
     }
 
-    public Collection<AirtableRecord> getRecords(final String filterModifiedAfter) {
+    public String getRecords(final String filterModifiedAfter, final List<String> fields, final String customFilter) {
         final String url = V0_BASE_URL + "/" + apiVersion.value() + "/" + baseId + "/" + tableId;
         final HttpUrl.Builder urlBuilder = Objects.requireNonNull(HttpUrl.parse(url)).newBuilder();
-        if (filterModifiedAfter != null) {
-            final String filterByFormula = "IS_AFTER(LAST_MODIFIED_TIME(), DATETIME_PARSE(\"" + filterModifiedAfter + "\"))";
-            urlBuilder.addQueryParameter("filterByFormula", filterByFormula);
+
+        if (fields != null) {
+            for (final String field : fields) {
+                urlBuilder.addQueryParameter("fields[]", field);
+            }
         }
+
+        final List<String> filtersByFormula = new ArrayList<>();
+        if (customFilter != null) {
+            filtersByFormula.add(customFilter);
+        }
+        if (filterModifiedAfter != null) {
+            final String filterByModifiedTime = "IS_AFTER(LAST_MODIFIED_TIME(), DATETIME_PARSE(\"" + filterModifiedAfter + "\"))";
+            filtersByFormula.add(filterByModifiedTime);
+        }
+        if (!filtersByFormula.isEmpty()) {
+            urlBuilder.addQueryParameter("filterByFormula", "AND(" + String.join(",", filtersByFormula) + ")");
+        }
+
         final Request request = new Request.Builder()
                 .url(urlBuilder.build())
                 .addHeader("Authorization", "Bearer " + apiToken)
@@ -72,9 +84,7 @@ public class AirtableRestService {
                 throw new ProcessException(exceptionMessageBuilder.toString());
             }
 
-            final ObjectMapper objectMapper = new ObjectMapper();
-            final AirtableRecords records = objectMapper.readValue(Objects.requireNonNull(response.body()).byteStream(), AirtableRecords.class);
-            return records.getRecords();
+            return Objects.requireNonNull(response.body()).string();
         } catch (final IOException e) {
             throw new ProcessException(String.format("Airtable HTTP request failed [%s]", request.url()), e);
         }

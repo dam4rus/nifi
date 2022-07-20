@@ -15,38 +15,25 @@
  * limitations under the License.
  */
 
-package org.apache.nifi.processors.airtable.model.v0;
+package org.apache.nifi.processors.airtable;
 
-import java.util.Date;
-import java.util.Map;
+public enum MetadataStrategy {
 
-public class AirtableRecord {
+    USE_JSON_RECORD_READER("Use JSON Record Reader", "Use a JSON Record Reader controller service to provide schema");
 
-    private String id;
-    private Date createdTime;
-    private Map<String, Object> fields;
+    private final String displayName;
+    private final String description;
 
-    public String getId() {
-        return id;
+    MetadataStrategy(final String displayName, final String description) {
+        this.displayName = displayName;
+        this.description = description;
     }
 
-    public void setId(String id) {
-        this.id = id;
+    public String displayName() {
+        return displayName;
     }
 
-    public Date getCreatedTime() {
-        return createdTime;
-    }
-
-    public void setCreatedTime(Date createdTime) {
-        this.createdTime = createdTime;
-    }
-
-    public Map<String, Object> getFields() {
-        return fields;
-    }
-
-    public void setFields(Map<String, Object> fields) {
-        this.fields = fields;
+    public String description() {
+        return description;
     }
 }

@@ -20,7 +20,7 @@ package org.apache.nifi.processors.airtable.service;
 public enum ApiVersion {
     V0("v0");
 
-    private String value;
+    private final String value;
 
     ApiVersion(final String value) {
         this.value = value;
