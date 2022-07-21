@@ -45,22 +45,26 @@ public class AirtableRestService {
         this.httpClient = new OkHttpClient();
     }
 
-    public String getRecords(final String filterModifiedAfter, final List<String> fields, final String customFilter) {
+    public String getRecords(final AirtableGetRecordsFilter filter) {
         final String url = V0_BASE_URL + "/" + apiVersion.value() + "/" + baseId + "/" + tableId;
         final HttpUrl.Builder urlBuilder = Objects.requireNonNull(HttpUrl.parse(url)).newBuilder();
 
-        if (fields != null) {
-            for (final String field : fields) {
+        if (filter.getFields() != null) {
+            for (final String field : filter.getFields()) {
                 urlBuilder.addQueryParameter("fields[]", field);
             }
         }
 
         final List<String> filtersByFormula = new ArrayList<>();
-        if (customFilter != null) {
-            filtersByFormula.add(customFilter);
+        if (filter.getFilterByFormula() != null) {
+            filtersByFormula.add(filter.getFilterByFormula());
         }
-        if (filterModifiedAfter != null) {
-            final String filterByModifiedTime = "IS_AFTER(LAST_MODIFIED_TIME(), DATETIME_PARSE(\"" + filterModifiedAfter + "\"))";
+        if (filter.getModifiedAfter() != null) {
+            final String filterByModifiedTime = "IS_AFTER(LAST_MODIFIED_TIME(),DATETIME_PARSE(\"" + filter.getModifiedAfter() + "\"))";
+            filtersByFormula.add(filterByModifiedTime);
+        }
+        if (filter.getModifiedBefore() != null) {
+            final String filterByModifiedTime = "IS_BEFORE(LAST_MODIFIED_TIME(),DATETIME_PARSE(\"" + filter.getModifiedBefore() + "\"))";
             filtersByFormula.add(filterByModifiedTime);
         }
         if (!filtersByFormula.isEmpty()) {
