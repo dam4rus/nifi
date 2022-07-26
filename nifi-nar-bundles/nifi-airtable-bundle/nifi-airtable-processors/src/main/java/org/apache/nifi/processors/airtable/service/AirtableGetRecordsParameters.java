@@ -19,45 +19,59 @@ package org.apache.nifi.processors.airtable.service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.OptionalInt;
 
-public class AirtableGetRecordsFilter {
+public class AirtableGetRecordsParameters {
 
     private final List<String> fields;
-    private final String modifiedAfter;
-    private final String modifiedBefore;
-    private final String filterByFormula;
+    private final Optional<String> modifiedAfter;
+    private final Optional<String> modifiedBefore;
+    private final Optional<String> filterByFormula;
+    private final Optional<String> offset;
+    private final OptionalInt pageSize;
 
-    public AirtableGetRecordsFilter() {
-        fields = null;
-        modifiedAfter = null;
-        modifiedBefore = null;
-        filterByFormula = null;
-    }
-
-    public AirtableGetRecordsFilter(List<String> fields,
-            String modifiedAfter,
-            String modifiedBefore,
-            String filterByFormula) {
-        this.fields = fields;
+    public AirtableGetRecordsParameters(final List<String> fields,
+            final Optional<String> modifiedAfter,
+            final Optional<String> modifiedBefore,
+            final Optional<String> filterByFormula,
+            final Optional<String> offset,
+            final OptionalInt pageSize) {
+        this.fields = Objects.requireNonNull(fields);
         this.modifiedAfter = modifiedAfter;
         this.modifiedBefore = modifiedBefore;
         this.filterByFormula = filterByFormula;
+        this.offset = offset;
+        this.pageSize = pageSize;
     }
 
     public List<String> getFields() {
         return fields;
     }
 
-    public String getModifiedAfter() {
+    public Optional<String> getModifiedAfter() {
         return modifiedAfter;
     }
 
-    public String getModifiedBefore() {
+    public Optional<String> getModifiedBefore() {
         return modifiedBefore;
     }
 
-    public String getFilterByFormula() {
+    public Optional<String> getFilterByFormula() {
         return filterByFormula;
+    }
+
+    public Optional<String> getOffset() {
+        return offset;
+    }
+
+    public OptionalInt getPageSize() {
+        return pageSize;
+    }
+
+    public AirtableGetRecordsParameters withOffset(final String offset) {
+        return new AirtableGetRecordsParameters(fields, modifiedAfter, modifiedBefore, filterByFormula, Optional.of(offset), pageSize);
     }
 
     public static class Builder {
@@ -65,6 +79,8 @@ public class AirtableGetRecordsFilter {
         private String modifiedAfter = null;
         private String modifiedBefore = null;
         private String filterByFormula = null;
+        private String offset = null;
+        private OptionalInt pageSize = OptionalInt.empty();
 
         public Builder fields(final List<String> fields) {
             this.fields = fields;
@@ -94,8 +110,23 @@ public class AirtableGetRecordsFilter {
             return this;
         }
 
-        public AirtableGetRecordsFilter build() {
-            return new AirtableGetRecordsFilter(fields, modifiedAfter, modifiedBefore, filterByFormula);
+        public Builder offset(final String offset) {
+            this.offset = offset;
+            return this;
+        }
+
+        public Builder pageSize(final int pageSize) {
+            this.pageSize = OptionalInt.of(pageSize);
+            return this;
+        }
+
+        public AirtableGetRecordsParameters build() {
+            return new AirtableGetRecordsParameters(fields != null ? fields : new ArrayList<String>(),
+                    Optional.ofNullable(modifiedAfter),
+                    Optional.ofNullable(modifiedBefore),
+                    Optional.ofNullable(filterByFormula),
+                    Optional.ofNullable(offset),
+                    pageSize);
         }
     }
 }

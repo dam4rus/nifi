@@ -17,80 +17,88 @@
 
 package org.apache.nifi.processors.airtable.service;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import okhttp3.HttpUrl;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
+import java.util.stream.Collectors;
+import javax.ws.rs.core.UriBuilder;
 import org.apache.nifi.processor.exception.ProcessException;
+import org.apache.nifi.web.client.api.HttpResponseEntity;
+import org.apache.nifi.web.client.api.StandardHttpRequestMethod;
+import org.apache.nifi.web.client.api.WebClientService;
 
 public class AirtableRestService {
 
-    private final String V0_BASE_URL = "https://api.airtable.com";
+    public static final String API_V0_BASE_URL = "https://api.airtable.com/v0";
 
-    private final ApiVersion apiVersion;
+    private final WebClientService webClientService;
+    private final String apiUrl;
     private final String apiToken;
     private final String baseId;
     private final String tableId;
-    private final OkHttpClient httpClient;
 
-    public AirtableRestService(final ApiVersion apiVersion, final String apiToken, final String baseId, final String tableId) {
-        this.apiVersion = apiVersion;
+    public AirtableRestService(final WebClientService webClientService, final String apiUrl, final String apiToken, final String baseId, final String tableId) {
+        this.webClientService = webClientService;
+        this.apiUrl = apiUrl;
         this.apiToken = apiToken;
         this.baseId = baseId;
         this.tableId = tableId;
-        this.httpClient = new OkHttpClient();
     }
 
-    public String getRecords(final AirtableGetRecordsFilter filter) {
-        final String url = V0_BASE_URL + "/" + apiVersion.value() + "/" + baseId + "/" + tableId;
-        final HttpUrl.Builder urlBuilder = Objects.requireNonNull(HttpUrl.parse(url)).newBuilder();
+    public String getRecords(final AirtableGetRecordsParameters filter) {
+        final UriBuilder uriBuilder = UriBuilder.fromUri(apiUrl).path(baseId).path(tableId);
 
-        if (filter.getFields() != null) {
-            for (final String field : filter.getFields()) {
-                urlBuilder.addQueryParameter("fields[]", field);
-            }
+        for (final String field : filter.getFields()) {
+            uriBuilder.queryParam("fields[]", field);
         }
 
         final List<String> filtersByFormula = new ArrayList<>();
-        if (filter.getFilterByFormula() != null) {
-            filtersByFormula.add(filter.getFilterByFormula());
-        }
-        if (filter.getModifiedAfter() != null) {
-            final String filterByModifiedTime = "IS_AFTER(LAST_MODIFIED_TIME(),DATETIME_PARSE(\"" + filter.getModifiedAfter() + "\"))";
-            filtersByFormula.add(filterByModifiedTime);
-        }
-        if (filter.getModifiedBefore() != null) {
-            final String filterByModifiedTime = "IS_BEFORE(LAST_MODIFIED_TIME(),DATETIME_PARSE(\"" + filter.getModifiedBefore() + "\"))";
-            filtersByFormula.add(filterByModifiedTime);
-        }
+        filter.getFilterByFormula()
+                .ifPresent(filtersByFormula::add);
+        filter.getModifiedAfter()
+                .map(modifiedAfter -> "IS_AFTER(LAST_MODIFIED_TIME(),DATETIME_PARSE(\"" + modifiedAfter + "\"))")
+                .ifPresent(filtersByFormula::add);
+        filter.getModifiedBefore()
+                .map(modifiedBefore -> "IS_BEFORE(LAST_MODIFIED_TIME(),DATETIME_PARSE(\"" + modifiedBefore + "\"))")
+                .ifPresent(filtersByFormula::add);
         if (!filtersByFormula.isEmpty()) {
-            urlBuilder.addQueryParameter("filterByFormula", "AND(" + String.join(",", filtersByFormula) + ")");
+            uriBuilder.queryParam("filterByFormula", "AND(" + String.join(",", filtersByFormula) + ")");
         }
+        filter.getOffset().ifPresent(offset -> uriBuilder.queryParam("offset", offset));
+        filter.getPageSize().ifPresent(pageSize -> uriBuilder.queryParam("pageSize", pageSize));
 
-        final Request request = new Request.Builder()
-                .url(urlBuilder.build())
-                .addHeader("Authorization", "Bearer " + apiToken)
-                .get()
-                .build();
+        final URI uri = uriBuilder.build();
+        try (final HttpResponseEntity response = webClientService.method(StandardHttpRequestMethod.GET)
+                .uri(uri)
+                .header("Authorization", "Bearer " + apiToken)
+                .retrieve()) {
 
-        try (final Response response = httpClient.newCall(request).execute()) {
-            if (response.code() != 200) {
-                final StringBuilder exceptionMessageBuilder = new StringBuilder("Invalid response" +
-                        " Code: " + response.code() +
-                        " Message: " + response.message());
-                if (response.body() != null) {
-                    exceptionMessageBuilder.append(" Body: ").append(response.body().string());
+            final String bodyText;
+            if (response.body() != null) {
+                bodyText = new BufferedReader(new InputStreamReader(response.body(), StandardCharsets.UTF_8))
+                        .lines()
+                        .collect(Collectors.joining("\n"));
+            } else {
+                bodyText = null;
+            }
+
+            if (response.statusCode() != 200) {
+                final StringBuilder exceptionMessageBuilder = new StringBuilder("Invalid response. Code: " + response.statusCode());
+
+                if (bodyText != null) {
+                    exceptionMessageBuilder.append(" Body: ").append(bodyText);
                 }
                 throw new ProcessException(exceptionMessageBuilder.toString());
             }
 
-            return Objects.requireNonNull(response.body()).string();
-        } catch (final IOException e) {
-            throw new ProcessException(String.format("Airtable HTTP request failed [%s]", request.url()), e);
+            return Objects.requireNonNull(bodyText);
+        } catch (IOException e) {
+            throw new ProcessException(String.format("Airtable HTTP request failed [%s]", uri), e);
         }
     }
 }
