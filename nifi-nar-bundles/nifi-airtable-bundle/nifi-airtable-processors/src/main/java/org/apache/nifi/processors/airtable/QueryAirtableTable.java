@@ -134,6 +134,7 @@ public class QueryAirtableTable extends AbstractProcessor {
             .displayName("Page size")
             .description("Number of rows to be fetched in a single request")
             .defaultValue("0")
+            .required(true)
             .addValidator(StandardValidators.createLongValidator(0, 100, true))
             .build();
 
@@ -142,6 +143,16 @@ public class QueryAirtableTable extends AbstractProcessor {
             .displayName("Max Records Per Flow File")
             .description("Max number of records in a flow file")
             .defaultValue("0")
+            .required(true)
+            .addValidator(StandardValidators.NON_NEGATIVE_INTEGER_VALIDATOR)
+            .build();
+
+    static final PropertyDescriptor OUTPUT_BATCH_SIZE = new PropertyDescriptor.Builder()
+            .name("output-batch-size")
+            .displayName("Output Batch Size")
+            .description("Output batch size")
+            .defaultValue("0")
+            .required(true)
             .addValidator(StandardValidators.NON_NEGATIVE_INTEGER_VALIDATOR)
             .build();
 
@@ -193,6 +204,7 @@ public class QueryAirtableTable extends AbstractProcessor {
             CUSTOM_FILTER,
             PAGE_SIZE,
             MAX_RECORDS_PER_FLOW_FILE,
+            OUTPUT_BATCH_SIZE,
             METADATA_STRATEGY,
             SCHEMA_READER,
             RECORD_WRITER,
@@ -234,13 +246,11 @@ public class QueryAirtableTable extends AbstractProcessor {
     }
 
     @Override
-    public void onTrigger(ProcessContext context, ProcessSession session) throws ProcessException {
-        final String fieldsProperty = context.getProperty(FIELDS).getValue();
-        final String customFilter = context.getProperty(CUSTOM_FILTER).getValue();
+    public void onTrigger(final ProcessContext context, final ProcessSession session) throws ProcessException {
         final JsonRecordReaderFactory schemaRecordReaderFactory = context.getProperty(SCHEMA_READER).asControllerService(JsonRecordReaderFactory.class);
         final RecordSetWriterFactory writerFactory = context.getProperty(RECORD_WRITER).asControllerService(RecordSetWriterFactory.class);
-        final Integer pageSize = context.getProperty(PAGE_SIZE).asInteger();
         final Integer maxRecordsPerFlowFile = context.getProperty(MAX_RECORDS_PER_FLOW_FILE).asInteger();
+        final Integer outputBatchSize = context.getProperty(OUTPUT_BATCH_SIZE).asInteger();
 
         final StateMap state;
         try {
@@ -249,27 +259,12 @@ public class QueryAirtableTable extends AbstractProcessor {
             throw new ProcessException("Failed to get cluster state", e);
         }
 
-        final String lastRecordFetchTime = state.get(LAST_RECORD_FETCH_TIME);
-        final String nowDateTimeString = OffsetDateTime.now().minusSeconds(QUERY_LAG_SECONDS).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+        final String lastRecordFetchDateTime = state.get(LAST_RECORD_FETCH_TIME);
+        final String currentRecordFetchDateTime = OffsetDateTime.now().minusSeconds(QUERY_LAG_SECONDS).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
 
-        final AirtableGetRecordsParameters.Builder getRecordsFilterBuilder = new AirtableGetRecordsParameters.Builder();
-        if (lastRecordFetchTime != null) {
-            getRecordsFilterBuilder
-                    .modifiedAfter(lastRecordFetchTime)
-                    .modifiedBefore(nowDateTimeString);
-        }
-        if (fieldsProperty != null) {
-            getRecordsFilterBuilder.fields(Arrays.stream(fieldsProperty.split(",")).collect(Collectors.toList()));
-        }
-        getRecordsFilterBuilder.filterByFormula(customFilter);
-        if (pageSize != null && pageSize > 0) {
-            getRecordsFilterBuilder.pageSize(pageSize);
-        }
-
-        final AirtableGetRecordsParameters getRecordsParameters = getRecordsFilterBuilder.build();
+        final AirtableGetRecordsParameters getRecordsParameters = buildGetRecordsParameters(context, lastRecordFetchDateTime, currentRecordFetchDateTime);
         final String recordsJson = airtableRestService.getRecords(getRecordsParameters);
 
-        final List<FlowFile> flowFiles = new ArrayList<>();
         final FlowFile flowFile = session.create();
         final Map<String, String> originalAttributes = flowFile.getAttributes();
 
@@ -285,6 +280,7 @@ public class QueryAirtableTable extends AbstractProcessor {
 
         session.remove(flowFile);
 
+        final List<FlowFile> flowFiles = new ArrayList<>();
         int totalRecordCount = 0;
         final JsonTreeRowRecordReaderFactory recordReaderFactory = new JsonTreeRowRecordReaderFactory(getLogger(), recordSchema);
         try (final AirtableRecordSet airtableRecordSet = new AirtableRecordSet(recordsJson, recordReaderFactory, airtableRestService, getRecordsParameters)) {
@@ -310,48 +306,84 @@ public class QueryAirtableTable extends AbstractProcessor {
                 flowFileToAdd = session.putAllAttributes(flowFileToAdd, attributes);
 
                 final int recordCount = recordCountHolder.get();
-                totalRecordCount += recordCount;
                 if (recordCount > 0) {
+                    totalRecordCount += recordCount;
                     flowFiles.add(flowFileToAdd);
-                } else {
-                    session.remove(flowFileToAdd);
-
-                    if (maxRecordsPerFlowFile > 0) {
-                        final String fragmentIdentifier = UUID.randomUUID().toString();
-
-                        for (int i = 0; i < flowFiles.size(); i++) {
-                            final Map<String, String> fragmentAttributes = new HashMap<>();
-                            fragmentAttributes.put(FRAGMENT_ID.key(), fragmentIdentifier);
-                            fragmentAttributes.put(FRAGMENT_INDEX.key(), String.valueOf(i));
-                            fragmentAttributes.put(FRAGMENT_COUNT.key(), String.valueOf(flowFiles.size()));
-
-                            flowFiles.set(i, session.putAllAttributes(flowFiles.get(i), fragmentAttributes));
-                        }
+                    if (outputBatchSize > 0 && flowFiles.size() == outputBatchSize) {
+                        transferFlowFiles(flowFiles, session, totalRecordCount);
+                        flowFiles.clear();
                     }
-                    break;
+                    continue;
                 }
+
+                session.remove(flowFileToAdd);
+
+                if (maxRecordsPerFlowFile > 0 && outputBatchSize == 0) {
+                    fragmentFlowFiles(session, flowFiles);
+                }
+
+                transferFlowFiles(flowFiles, session, totalRecordCount);
+                break;
             }
         } catch (IOException e) {
-            throw new ProcessException("Couldn't reader records from input", e);
+            throw new ProcessException("Couldn't read records from input", e);
         }
 
         if (totalRecordCount > 0) {
-            session.transfer(flowFiles, REL_SUCCESS);
-            session.adjustCounter("Records Processed", totalRecordCount, false);
-            final String flowFilesAsString = flowFiles.stream().map(FlowFile::toString).collect(Collectors.joining(", ", "[", "]"));
-            getLogger().info("Successfully written {} records for flow files {}", totalRecordCount, flowFilesAsString);
-
             final Map<String, String> newState = new HashMap<>(state.toMap());
-            newState.put(LAST_RECORD_FETCH_TIME, nowDateTimeString);
+            newState.put(LAST_RECORD_FETCH_TIME, currentRecordFetchDateTime);
             try {
                 context.getStateManager().setState(newState, Scope.CLUSTER);
             } catch (IOException e) {
                 throw new ProcessException("Failed to update cluster state", e);
             }
         } else {
-            session.remove(flowFiles);
             context.yield();
         }
+    }
+
+    private AirtableGetRecordsParameters buildGetRecordsParameters(final ProcessContext context,
+            final String lastRecordFetchTime,
+            final String nowDateTimeString) {
+        final String fieldsProperty = context.getProperty(FIELDS).getValue();
+        final String customFilter = context.getProperty(CUSTOM_FILTER).getValue();
+        final Integer pageSize = context.getProperty(PAGE_SIZE).asInteger();
+
+        final AirtableGetRecordsParameters.Builder getRecordsParametersBuilder = new AirtableGetRecordsParameters.Builder();
+        if (lastRecordFetchTime != null) {
+            getRecordsParametersBuilder
+                    .modifiedAfter(lastRecordFetchTime)
+                    .modifiedBefore(nowDateTimeString);
+        }
+        if (fieldsProperty != null) {
+            getRecordsParametersBuilder.fields(Arrays.stream(fieldsProperty.split(",")).collect(Collectors.toList()));
+        }
+        getRecordsParametersBuilder.filterByFormula(customFilter);
+        if (pageSize != null && pageSize > 0) {
+            getRecordsParametersBuilder.pageSize(pageSize);
+        }
+
+        return getRecordsParametersBuilder.build();
+    }
+
+    private void fragmentFlowFiles(final ProcessSession session, final List<FlowFile> flowFiles) {
+        final String fragmentIdentifier = UUID.randomUUID().toString();
+
+        for (int i = 0; i < flowFiles.size(); i++) {
+            final Map<String, String> fragmentAttributes = new HashMap<>();
+            fragmentAttributes.put(FRAGMENT_ID.key(), fragmentIdentifier);
+            fragmentAttributes.put(FRAGMENT_INDEX.key(), String.valueOf(i));
+            fragmentAttributes.put(FRAGMENT_COUNT.key(), String.valueOf(flowFiles.size()));
+
+            flowFiles.set(i, session.putAllAttributes(flowFiles.get(i), fragmentAttributes));
+        }
+    }
+
+    private void transferFlowFiles(final List<FlowFile> flowFiles, final ProcessSession session, final int totalRecordCount) {
+        session.transfer(flowFiles, REL_SUCCESS);
+        session.adjustCounter("Records Processed", totalRecordCount, false);
+        final String flowFilesAsString = flowFiles.stream().map(FlowFile::toString).collect(Collectors.joining(", ", "[", "]"));
+        getLogger().info("Successfully written {} records for flow files {}", totalRecordCount, flowFilesAsString);
     }
 
     private static AllowableValue[] buildMetadataStrategyAllowableValues() {
