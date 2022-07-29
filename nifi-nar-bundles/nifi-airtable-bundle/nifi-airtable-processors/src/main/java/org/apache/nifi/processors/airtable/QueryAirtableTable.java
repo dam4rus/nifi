@@ -263,7 +263,7 @@ public class QueryAirtableTable extends AbstractProcessor {
         final String currentRecordFetchDateTime = OffsetDateTime.now().minusSeconds(QUERY_LAG_SECONDS).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
 
         final AirtableGetRecordsParameters getRecordsParameters = buildGetRecordsParameters(context, lastRecordFetchDateTime, currentRecordFetchDateTime);
-        final String recordsJson = airtableRestService.getRecords(getRecordsParameters);
+        final byte[] recordsJson = airtableRestService.getRecords(getRecordsParameters);
 
         final FlowFile flowFile = session.create();
         final Map<String, String> originalAttributes = flowFile.getAttributes();
@@ -271,7 +271,7 @@ public class QueryAirtableTable extends AbstractProcessor {
         final RecordSchema recordSchema;
         final RecordSchema writerSchema;
         try {
-            final ByteArrayInputStream recordsStream = new ByteArrayInputStream(recordsJson.getBytes(StandardCharsets.UTF_8));
+            final ByteArrayInputStream recordsStream = new ByteArrayInputStream(recordsJson);
             recordSchema = schemaRecordReaderFactory.createRecordReader(flowFile, recordsStream, getLogger()).getSchema();
             writerSchema = writerFactory.getSchema(originalAttributes, recordSchema);
         } catch (MalformedRecordException | IOException | SchemaNotFoundException e) {

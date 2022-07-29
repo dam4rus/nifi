@@ -23,7 +23,6 @@ import com.jayway.jsonpath.Option;
 import java.io.ByteArrayInputStream;
 import java.io.Closeable;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import org.apache.nifi.json.JsonTreeRowRecordReader;
 import org.apache.nifi.processors.airtable.service.AirtableGetRecordsParameters;
 import org.apache.nifi.processors.airtable.service.AirtableRestService;
@@ -34,20 +33,20 @@ import org.apache.nifi.serialization.record.RecordSet;
 
 public class AirtableRecordSet implements RecordSet, Closeable {
 
-    String recordsJson;
     final JsonTreeRowRecordReaderFactory recordReaderFactory;
     final AirtableRestService restService;
     final AirtableGetRecordsParameters getRecordsParameters;
+    byte[] recordsJson;
     JsonTreeRowRecordReader reader = null;
 
-    public AirtableRecordSet(final String recordsJson,
+    public AirtableRecordSet(final byte[] recordsJson,
             final JsonTreeRowRecordReaderFactory recordReaderFactory,
             final AirtableRestService restService,
             final AirtableGetRecordsParameters getRecordsParameters) {
-        this.recordsJson = recordsJson;
         this.recordReaderFactory = recordReaderFactory;
         this.restService = restService;
         this.getRecordsParameters = getRecordsParameters;
+        this.recordsJson = recordsJson;
     }
 
     @Override
@@ -58,7 +57,7 @@ public class AirtableRecordSet implements RecordSet, Closeable {
     @Override
     public Record next() throws IOException {
         if (reader == null) {
-            final ByteArrayInputStream inputStream = new ByteArrayInputStream(recordsJson.getBytes(StandardCharsets.UTF_8));
+            final ByteArrayInputStream inputStream = new ByteArrayInputStream(recordsJson);
             try {
                 reader = recordReaderFactory.create(inputStream);
             } catch (MalformedRecordException e) {
@@ -78,7 +77,7 @@ public class AirtableRecordSet implements RecordSet, Closeable {
 
         final Configuration configuration = Configuration.defaultConfiguration()
                 .addOptions(Option.DEFAULT_PATH_LEAF_TO_NULL);
-        final String offset = JsonPath.using(configuration).parse(recordsJson).read("$.offset");
+        final String offset = JsonPath.using(configuration).parse(new ByteArrayInputStream(recordsJson)).read("$.offset");
         if (offset != null) {
             recordsJson = restService.getRecords(getRecordsParameters.withOffset(offset));
             reader = null;
