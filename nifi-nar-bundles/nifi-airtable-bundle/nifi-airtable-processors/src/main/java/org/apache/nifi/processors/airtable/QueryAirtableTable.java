@@ -50,6 +50,7 @@ import org.apache.nifi.components.AllowableValue;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.components.state.Scope;
 import org.apache.nifi.components.state.StateMap;
+import org.apache.nifi.expression.ExpressionLanguageScope;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.flowfile.attributes.CoreAttributes;
 import org.apache.nifi.processor.AbstractProcessor;
@@ -87,6 +88,7 @@ public class QueryAirtableTable extends AbstractProcessor {
             .defaultValue(API_V0_BASE_URL)
             .addValidator(StandardValidators.NON_BLANK_VALIDATOR)
             .addValidator(StandardValidators.URL_VALIDATOR)
+            .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
             .required(true)
             .build();
 
@@ -95,6 +97,7 @@ public class QueryAirtableTable extends AbstractProcessor {
             .displayName("Base ID")
             .description("ID of the base")
             .required(true)
+            .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
             .addValidator(StandardValidators.NON_BLANK_VALIDATOR)
             .build();
 
@@ -103,6 +106,7 @@ public class QueryAirtableTable extends AbstractProcessor {
             .displayName("Table name/ID")
             .description("Name or ID of the table")
             .required(true)
+            .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
             .addValidator(StandardValidators.NON_BLANK_VALIDATOR)
             .build();
 
@@ -112,6 +116,7 @@ public class QueryAirtableTable extends AbstractProcessor {
             .description("API token to pass to all request")
             .required(true)
             .sensitive(true)
+            .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
             .addValidator(StandardValidators.NON_BLANK_VALIDATOR)
             .build();
 
@@ -119,6 +124,7 @@ public class QueryAirtableTable extends AbstractProcessor {
             .name("fields")
             .displayName("Fields")
             .description("Fields to fetch separated by comma. Leave empty to fetch all field")
+            .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
             .addValidator(StandardValidators.NON_BLANK_VALIDATOR)
             .build();
 
@@ -126,6 +132,7 @@ public class QueryAirtableTable extends AbstractProcessor {
             .name("custom-filter")
             .displayName("Custom filter")
             .description("Filter records by a custom formula")
+            .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
             .addValidator(StandardValidators.NON_BLANK_VALIDATOR)
             .build();
 
@@ -135,6 +142,7 @@ public class QueryAirtableTable extends AbstractProcessor {
             .description("Number of rows to be fetched in a single request")
             .defaultValue("0")
             .required(true)
+            .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
             .addValidator(StandardValidators.createLongValidator(0, 100, true))
             .build();
 
@@ -144,6 +152,7 @@ public class QueryAirtableTable extends AbstractProcessor {
             .description("Max number of records in a flow file")
             .defaultValue("0")
             .required(true)
+            .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
             .addValidator(StandardValidators.NON_NEGATIVE_INTEGER_VALIDATOR)
             .build();
 
@@ -153,6 +162,7 @@ public class QueryAirtableTable extends AbstractProcessor {
             .description("Output batch size")
             .defaultValue("0")
             .required(true)
+            .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
             .addValidator(StandardValidators.NON_NEGATIVE_INTEGER_VALIDATOR)
             .build();
 
@@ -237,10 +247,10 @@ public class QueryAirtableTable extends AbstractProcessor {
 
     @OnScheduled
     public void onScheduled(final ProcessContext context) {
-        final String apiUrl = context.getProperty(API_URL).getValue();
-        final String apiToken = context.getProperty(API_TOKEN).getValue();
-        final String baseId = context.getProperty(BASE_ID).getValue();
-        final String tableId = context.getProperty(TABLE_ID).getValue();
+        final String apiUrl = context.getProperty(API_URL).evaluateAttributeExpressions().getValue();
+        final String apiToken = context.getProperty(API_TOKEN).evaluateAttributeExpressions().getValue();
+        final String baseId = context.getProperty(BASE_ID).evaluateAttributeExpressions().getValue();
+        final String tableId = context.getProperty(TABLE_ID).evaluateAttributeExpressions().getValue();
         final WebClientServiceProvider webClientServiceProvider = context.getProperty(WEB_CLIENT_SERVICE).asControllerService(WebClientServiceProvider.class);
         airtableRestService = new AirtableRestService(webClientServiceProvider.getWebClientService(), apiUrl, apiToken, baseId, tableId);
     }
@@ -249,8 +259,8 @@ public class QueryAirtableTable extends AbstractProcessor {
     public void onTrigger(final ProcessContext context, final ProcessSession session) throws ProcessException {
         final JsonRecordReaderFactory schemaRecordReaderFactory = context.getProperty(SCHEMA_READER).asControllerService(JsonRecordReaderFactory.class);
         final RecordSetWriterFactory writerFactory = context.getProperty(RECORD_WRITER).asControllerService(RecordSetWriterFactory.class);
-        final Integer maxRecordsPerFlowFile = context.getProperty(MAX_RECORDS_PER_FLOW_FILE).asInteger();
-        final Integer outputBatchSize = context.getProperty(OUTPUT_BATCH_SIZE).asInteger();
+        final Integer maxRecordsPerFlowFile = context.getProperty(MAX_RECORDS_PER_FLOW_FILE).evaluateAttributeExpressions().asInteger();
+        final Integer outputBatchSize = context.getProperty(OUTPUT_BATCH_SIZE).evaluateAttributeExpressions().asInteger();
 
         final StateMap state;
         try {
@@ -345,9 +355,9 @@ public class QueryAirtableTable extends AbstractProcessor {
     private AirtableGetRecordsParameters buildGetRecordsParameters(final ProcessContext context,
             final String lastRecordFetchTime,
             final String nowDateTimeString) {
-        final String fieldsProperty = context.getProperty(FIELDS).getValue();
-        final String customFilter = context.getProperty(CUSTOM_FILTER).getValue();
-        final Integer pageSize = context.getProperty(PAGE_SIZE).asInteger();
+        final String fieldsProperty = context.getProperty(FIELDS).evaluateAttributeExpressions().getValue();
+        final String customFilter = context.getProperty(CUSTOM_FILTER).evaluateAttributeExpressions().getValue();
+        final Integer pageSize = context.getProperty(PAGE_SIZE).evaluateAttributeExpressions().asInteger();
 
         final AirtableGetRecordsParameters.Builder getRecordsParametersBuilder = new AirtableGetRecordsParameters.Builder();
         if (lastRecordFetchTime != null) {
