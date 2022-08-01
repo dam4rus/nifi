@@ -26,7 +26,7 @@ import org.apache.nifi.logging.ComponentLog;
 import org.apache.nifi.serialization.MalformedRecordException;
 import org.apache.nifi.serialization.record.RecordSchema;
 
-public class JsonTreeRowRecordReaderFactory {
+public class AirtableJsonTreeRowRecordReaderFactory {
 
     private static final String STARTING_FIELD_NAME = "records";
     private static final String DATE_FORMAT = "yyyy-MM-dd";
@@ -36,7 +36,7 @@ public class JsonTreeRowRecordReaderFactory {
     final ComponentLog componentLog;
     final RecordSchema recordSchema;
 
-    public JsonTreeRowRecordReaderFactory(final ComponentLog componentLog, final RecordSchema recordSchema) {
+    public AirtableJsonTreeRowRecordReaderFactory(final ComponentLog componentLog, final RecordSchema recordSchema) {
         this.componentLog = componentLog;
         this.recordSchema = recordSchema;
     }

@@ -33,14 +33,14 @@ import org.apache.nifi.serialization.record.RecordSet;
 
 public class AirtableRecordSet implements RecordSet, Closeable {
 
-    final JsonTreeRowRecordReaderFactory recordReaderFactory;
+    final AirtableJsonTreeRowRecordReaderFactory recordReaderFactory;
     final AirtableRestService restService;
     final AirtableGetRecordsParameters getRecordsParameters;
     byte[] recordsJson;
     JsonTreeRowRecordReader reader = null;
 
     public AirtableRecordSet(final byte[] recordsJson,
-            final JsonTreeRowRecordReaderFactory recordReaderFactory,
+            final AirtableJsonTreeRowRecordReaderFactory recordReaderFactory,
             final AirtableRestService restService,
             final AirtableGetRecordsParameters getRecordsParameters) {
         this.recordReaderFactory = recordReaderFactory;

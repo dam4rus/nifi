@@ -24,7 +24,6 @@ import static org.apache.nifi.processors.airtable.service.AirtableRestService.AP
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -60,7 +59,7 @@ import org.apache.nifi.processor.Relationship;
 import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.processor.util.StandardValidators;
 import org.apache.nifi.processors.airtable.record.AirtableRecordSet;
-import org.apache.nifi.processors.airtable.record.JsonTreeRowRecordReaderFactory;
+import org.apache.nifi.processors.airtable.record.AirtableJsonTreeRowRecordReaderFactory;
 import org.apache.nifi.processors.airtable.service.AirtableGetRecordsParameters;
 import org.apache.nifi.processors.airtable.service.AirtableRestService;
 import org.apache.nifi.schema.access.SchemaNotFoundException;
@@ -292,7 +291,7 @@ public class QueryAirtableTable extends AbstractProcessor {
 
         final List<FlowFile> flowFiles = new ArrayList<>();
         int totalRecordCount = 0;
-        final JsonTreeRowRecordReaderFactory recordReaderFactory = new JsonTreeRowRecordReaderFactory(getLogger(), recordSchema);
+        final AirtableJsonTreeRowRecordReaderFactory recordReaderFactory = new AirtableJsonTreeRowRecordReaderFactory(getLogger(), recordSchema);
         try (final AirtableRecordSet airtableRecordSet = new AirtableRecordSet(recordsJson, recordReaderFactory, airtableRestService, getRecordsParameters)) {
             while (true) {
                 final AtomicInteger recordCountHolder = new AtomicInteger();
