@@ -41,7 +41,10 @@ import org.apache.nifi.annotation.behavior.InputRequirement;
 import org.apache.nifi.annotation.behavior.InputRequirement.Requirement;
 import org.apache.nifi.annotation.behavior.PrimaryNodeOnly;
 import org.apache.nifi.annotation.behavior.Stateful;
+import org.apache.nifi.annotation.behavior.TriggerSerially;
 import org.apache.nifi.annotation.behavior.TriggerWhenEmpty;
+import org.apache.nifi.annotation.behavior.WritesAttribute;
+import org.apache.nifi.annotation.behavior.WritesAttributes;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.annotation.lifecycle.OnScheduled;
@@ -74,16 +77,27 @@ import org.apache.nifi.web.client.provider.api.WebClientServiceProvider;
 
 @PrimaryNodeOnly
 @InputRequirement(Requirement.INPUT_FORBIDDEN)
+@TriggerSerially
 @TriggerWhenEmpty
-@Tags({"airtable"})
-@CapabilityDescription("Query records from an Airtable table")
-@Stateful(scopes = Scope.CLUSTER, description = "Records are queried by last modified time to enable incremental loading. The last query's time is stored")
+@Tags({"airtable", "query", "database"})
+@CapabilityDescription("Query records from an Airtable table. Records are incrementally retrieved based on the last modified time of the records."
+        + " Records can also be further filtered by setting the 'Custom Filter' property which supports the formulas provided by the Airtable API."
+        + " Schema can be provided by setting up a JsonTreeReader controller service properly. This processor is intended to be run on the Primary Node only.")
+@Stateful(scopes = Scope.CLUSTER, description = "The last successful query's time is stored in order to enable incremental loading."
+        + " The initial query returns all the records in the table and each subsequent query filters the records by their last modified time."
+        + " In other words, if a record is updated after the last successful query only the updated records will be returned in the next query."
+        + " State is stored across the cluster so that this Processor can be run on Primary Node only and if a new Primary Node is selected,"
+        + " the new node can pick up where the previous node left off, without duplicating the data.")
+@WritesAttributes({
+        @WritesAttribute(attribute = "mime.type", description = "Sets the mime.type attribute to the MIME Type specified by the Record Writer."),
+        @WritesAttribute(attribute = "record.count", description = "Sets the number of records in the FlowFile.")
+})
 public class QueryAirtableTable extends AbstractProcessor {
 
     static final PropertyDescriptor API_URL = new PropertyDescriptor.Builder()
             .name("api-url")
-            .displayName("API url")
-            .description("API url to use")
+            .displayName("API URL")
+            .description("The URL for the Airtable REST API including the domain and the path to the API (e.g. https://api.airtable.com/v0).")
             .defaultValue(API_V0_BASE_URL)
             .addValidator(StandardValidators.NON_BLANK_VALIDATOR)
             .addValidator(StandardValidators.URL_VALIDATOR)
@@ -94,7 +108,7 @@ public class QueryAirtableTable extends AbstractProcessor {
     static final PropertyDescriptor BASE_ID = new PropertyDescriptor.Builder()
             .name("base-id")
             .displayName("Base ID")
-            .description("ID of the base")
+            .description("The ID of the Airtable base to be queried.")
             .required(true)
             .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
             .addValidator(StandardValidators.NON_BLANK_VALIDATOR)
@@ -102,8 +116,8 @@ public class QueryAirtableTable extends AbstractProcessor {
 
     static final PropertyDescriptor TABLE_ID = new PropertyDescriptor.Builder()
             .name("table-id")
-            .displayName("Table name/ID")
-            .description("Name or ID of the table")
+            .displayName("Table Name or ID")
+            .description("The name or the ID of the Airtable table to be queried.")
             .required(true)
             .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
             .addValidator(StandardValidators.NON_BLANK_VALIDATOR)
@@ -111,8 +125,8 @@ public class QueryAirtableTable extends AbstractProcessor {
 
     static final PropertyDescriptor API_TOKEN = new PropertyDescriptor.Builder()
             .name("api-token")
-            .displayName("API token")
-            .description("API token to pass to all request")
+            .displayName("API Token")
+            .description("The REST API token to use in queries. Should be generated on Airtable's account page.")
             .required(true)
             .sensitive(true)
             .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
@@ -122,23 +136,23 @@ public class QueryAirtableTable extends AbstractProcessor {
     static final PropertyDescriptor FIELDS = new PropertyDescriptor.Builder()
             .name("fields")
             .displayName("Fields")
-            .description("Fields to fetch separated by comma. Leave empty to fetch all field")
+            .description("Comma-separated list of fields to query from the table. Both the field's name and ID can be used.")
             .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
             .addValidator(StandardValidators.NON_BLANK_VALIDATOR)
             .build();
 
     static final PropertyDescriptor CUSTOM_FILTER = new PropertyDescriptor.Builder()
             .name("custom-filter")
-            .displayName("Custom filter")
-            .description("Filter records by a custom formula")
+            .displayName("Custom Filter")
+            .description("Filter records by Airtable's formulas.")
             .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
             .addValidator(StandardValidators.NON_BLANK_VALIDATOR)
             .build();
 
     static final PropertyDescriptor PAGE_SIZE = new PropertyDescriptor.Builder()
             .name("page-size")
-            .displayName("Page size")
-            .description("Number of rows to be fetched in a single request")
+            .displayName("Page Size")
+            .description("Number of records to be fetched in a page. Should be between 0 and 100 inclusively.")
             .defaultValue("0")
             .required(true)
             .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
@@ -148,7 +162,8 @@ public class QueryAirtableTable extends AbstractProcessor {
     static final PropertyDescriptor MAX_RECORDS_PER_FLOW_FILE = new PropertyDescriptor.Builder()
             .name("max-records-per-flow-file")
             .displayName("Max Records Per Flow File")
-            .description("Max number of records in a flow file")
+            .description("The maximum number of result records that will be included in a single FlowFile. This will allow you to break up very large"
+                    + " result sets into multiple FlowFiles. If the value specified is zero, then all records are returned in a single FlowFile.")
             .defaultValue("0")
             .required(true)
             .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
@@ -158,7 +173,10 @@ public class QueryAirtableTable extends AbstractProcessor {
     static final PropertyDescriptor OUTPUT_BATCH_SIZE = new PropertyDescriptor.Builder()
             .name("output-batch-size")
             .displayName("Output Batch Size")
-            .description("Output batch size")
+            .description("The number of output FlowFiles to queue before committing the process session. When set to zero, the session will be committed when all records"
+                    + " have been processed and the output FlowFiles are ready for transfer to the downstream relationship. For large result sets, this can cause a large burst of FlowFiles"
+                    + " to be transferred at the end of processor execution. If this property is set, then when the specified number of FlowFiles are ready for transfer, then the session will"
+                    + " be committed, thus releasing the FlowFiles to the downstream relationship.")
             .defaultValue("0")
             .required(true)
             .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
@@ -167,8 +185,9 @@ public class QueryAirtableTable extends AbstractProcessor {
 
     static final PropertyDescriptor METADATA_STRATEGY = new PropertyDescriptor.Builder()
             .name("metadata-strategy")
-            .displayName("Metadata strategy")
-            .description("Strategy to use for fetching record schema")
+            .displayName("Metadata Strategy")
+            .description("Strategy to use for fetching record schema. Currently only 'Use JSON Record Reader' is supported."
+                    + " When Airtable Metadata API becomes more stable it will be possible to fetch the record schema through it.")
             .required(true)
             .defaultValue(MetadataStrategy.USE_JSON_RECORD_READER.name())
             .allowableValues(buildMetadataStrategyAllowableValues())
@@ -176,8 +195,8 @@ public class QueryAirtableTable extends AbstractProcessor {
 
     static final PropertyDescriptor SCHEMA_READER = new PropertyDescriptor.Builder()
             .name("schema-reader")
-            .displayName("Schema reader")
-            .description("Record reader to use for schema")
+            .displayName("Schema Reader")
+            .description("JsonTreeReader service to use for fetching the schema of records returned by the Airtable REST API")
             .dependsOn(METADATA_STRATEGY, MetadataStrategy.USE_JSON_RECORD_READER.name())
             .identifiesControllerService(JsonRecordReaderFactory.class)
             .required(true)
@@ -185,16 +204,16 @@ public class QueryAirtableTable extends AbstractProcessor {
 
     static final PropertyDescriptor RECORD_WRITER = new PropertyDescriptor.Builder()
             .name("record-writer")
-            .displayName("Record writer")
-            .description("Record writer")
+            .displayName("Record Writer")
+            .description("Service used for writing records returned by the Airtable REST API")
             .identifiesControllerService(RecordSetWriterFactory.class)
             .required(true)
             .build();
 
     static final PropertyDescriptor WEB_CLIENT_SERVICE = new PropertyDescriptor.Builder()
             .name("web-client-service")
-            .displayName("Web client service")
-            .description("Web client service provider")
+            .displayName("Web Client")
+            .description("Web Client service to use for Airtable REST API requests")
             .identifiesControllerService(WebClientServiceProvider.class)
             .required(true)
             .build();
@@ -365,7 +384,7 @@ public class QueryAirtableTable extends AbstractProcessor {
                     .modifiedBefore(nowDateTimeString);
         }
         if (fieldsProperty != null) {
-            getRecordsParametersBuilder.fields(Arrays.stream(fieldsProperty.split(",")).collect(Collectors.toList()));
+            getRecordsParametersBuilder.fields(Arrays.stream(fieldsProperty.split(",")).map(String::trim).collect(Collectors.toList()));
         }
         getRecordsParametersBuilder.filterByFormula(customFilter);
         if (pageSize != null && pageSize > 0) {

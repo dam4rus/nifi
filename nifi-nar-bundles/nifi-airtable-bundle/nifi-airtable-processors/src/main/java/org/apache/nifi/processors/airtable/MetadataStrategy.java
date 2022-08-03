@@ -19,7 +19,7 @@ package org.apache.nifi.processors.airtable;
 
 public enum MetadataStrategy {
 
-    USE_JSON_RECORD_READER("Use JSON Record Reader", "Use a JSON Record Reader controller service to provide schema");
+    USE_JSON_RECORD_READER("Use JSON Record Reader", "Use a JsonTreeReader controller service to provide schema");
 
     private final String displayName;
     private final String description;

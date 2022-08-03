@@ -34,7 +34,7 @@
 
 <head>
     <meta charset="utf-8"/>
-    <title>QuerySalesforceObject</title>
+    <title>QueryAirtableTable</title>
     <link rel="stylesheet" href="../../../../../css/component-usage.css" type="text/css"/>
     <style>
 h2 {margin-top: 4em}
@@ -45,45 +45,39 @@ td {text-align: left}
 
 <body>
 
-<h1>QuerySalesforceObject</h1>
+<h1>QueryAirtableTable</h1>
 
 <h3>Description</h3>
-
 <p>
-    Objects in Salesforce are database tables, their rows are known as records, and their columns are called fields. The QuerySalesforceObject processor queries Salesforce objects and retrieves their records.
-    The processor constructs the query using SOQL (Salesforce Object Query Language) and retrieves the result record dataset using the Salesforce REST API.
+    Airtable is a spreadsheet-database hybrid. In Airtable an application is called base and each base can have multiple tables.
+    A table consists of records (rows) and each record can have multiple fields (columns).
+    The QueryAirtableTable processor can query records from a single base and table via Airtable's REST API.
     The processor utilizes streams and NiFi record-based processing to be able to handle a large number of records and to allow arbitrary output format.
+    It can also split large record sets to multiple FlowFiles and transfer them in batches just like a database processor.
 </p>
 
-<h3>OAuth2 Access Token Provider Service</h3>
-
+<h3>API Token</h3>
 <p>
-    The OAuth2 Access Token Provider Service handles Salesforce REST API authorization. In order to use OAuth2 authorization, create a new StandardOauth2AccessTokenProvider service and configure it as follows.
+    Airtable REST API calls require a so-called "API Token" that can needs to be passed in a request. An Airtable account is required to generate such token.
 </p>
 
+<h3>API rate limit</h3>
+<p>
+    The Airtable REST API limits the number of requests that can be sent on a per-base basis to avoid bottlenecks. Currently, this limit is 5 requests per second per base.
+    If this limit is exceeded the user can't make another request for 30 seconds. It's the user's responsibility to handle this rate limit.
+</p>
+
+<h3>Metadata API</h3>
+<p>
+    Currently the Metadata API of Airtable is unstable, and we don't provide a way to use it. Until it becomes stable the user should set up a JsonTreeReader service to provide a schema.
+    The JsonTreeReader is need to be set up in a specific way to properly work with the response of an Airtable REST API call.
+</p>
 <ul>
-    <li>Authorization Server URL: It is the concatenation of the Salesforce URL and the token request service URL (/services/oauth2/token).</li>
-    <li>Grant Type: User Password.</li>
-    <li>Username: The email address registered in the Salesforce account.</li>
-    <li>Password: For the Password a Security token must be requested. Go to Profile -> Settings and under the Reset My Security Token option, request one, which will be sent to the registered email address.
-        The password is made up of the Salesforce account password and the Security token concatenated together without a space.</li>
-    <li>Client ID: Create a new Connected App within Salesforce. Go to Setup -> On the left search panel find App Manager -> Create New Connected App. Once it’s done, the Consumer Key goes to the Client ID property.</li>
-    <li>Client Secret: Available on the Connected App page under Consumer Secret.</li>
+    <li>"Starting Field Strategy" needs to be set to "Nested Field"</li>
+    <li>"Starting Field Name" needs to be set to "records"</li>
+    <li>"Schema Application Strategy" needs to be set to "Selected Part"</li>
 </ul>
-
-<h3>Age properties</h3>
-
-<p>
-    The age properties are important to avoid processing duplicate records. Age filtering provides a sliding window that starts with the processor’s prior run time and ends with the current run time minus the age delay.
-    Only records that are within the sliding window are queried and processed. On the processor, the Age Field property must be a datetime field of the queried object, this will be subject to the condition that it is greater
-    than the processor's previous but less than the current run time (e.g. LastModifiedDate). The first run, for example, will query records whose LastModifiedDate field is earlier than the current run time. The second will
-    look for records with LastModifiedDate fields that are later than the previous run time but earlier than the current run time.
-</p>
-
-<p>
-    The processor uses the Initial Age Filter as a specific timestamp that sets the beginning of the sliding window from which processing builds the initial query. The format must adhere to
-    the Salesforce SOQL standards (see Salesforce documentation). The Age Delay moves the time of the records to be processed earlier than the current run time if necessary.
-</p>
+<p>This ensures that only the records are included in the schema.</p>
 
 </body>
 </html>
