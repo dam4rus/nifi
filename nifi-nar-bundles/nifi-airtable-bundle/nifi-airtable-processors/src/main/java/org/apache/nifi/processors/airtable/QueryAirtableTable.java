@@ -398,7 +398,6 @@ public class QueryAirtableTable extends AbstractProcessor {
 
     private void fragmentFlowFiles(final ProcessSession session, final List<FlowFile> flowFiles) {
         final String fragmentIdentifier = UUID.randomUUID().toString();
-
         for (int i = 0; i < flowFiles.size(); i++) {
             final Map<String, String> fragmentAttributes = new HashMap<>();
             fragmentAttributes.put(FRAGMENT_ID.key(), fragmentIdentifier);
