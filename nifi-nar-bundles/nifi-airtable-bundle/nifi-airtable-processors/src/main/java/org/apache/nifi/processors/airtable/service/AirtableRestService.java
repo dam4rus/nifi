@@ -26,7 +26,6 @@ import javax.ws.rs.core.UriBuilder;
 import org.apache.commons.io.IOUtils;
 import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.web.client.api.HttpResponseEntity;
-import org.apache.nifi.web.client.api.StandardHttpRequestMethod;
 import org.apache.nifi.web.client.api.WebClientService;
 
 public class AirtableRestService {
@@ -39,7 +38,11 @@ public class AirtableRestService {
     private final String baseId;
     private final String tableId;
 
-    public AirtableRestService(final WebClientService webClientService, final String apiUrl, final String apiToken, final String baseId, final String tableId) {
+    public AirtableRestService(final WebClientService webClientService,
+            final String apiUrl,
+            final String apiToken,
+            final String baseId,
+            final String tableId) {
         this.webClientService = webClientService;
         this.apiUrl = apiUrl;
         this.apiToken = apiToken;
@@ -48,6 +51,28 @@ public class AirtableRestService {
     }
 
     public byte[] getRecords(final AirtableGetRecordsParameters filter) {
+        final URI uri = buildUri(filter);
+        try (final HttpResponseEntity response = webClientService.get()
+                .uri(uri)
+                .header("Authorization", "Bearer " + apiToken)
+                .retrieve()) {
+
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                return IOUtils.toByteArray(response.body());
+            }
+            final StringBuilder exceptionMessageBuilder = new StringBuilder("Invalid response. Code: " + response.statusCode());
+            final String bodyText = IOUtils.toString(response.body(), StandardCharsets.UTF_8);
+            if (bodyText != null) {
+                exceptionMessageBuilder.append(" Body: ").append(bodyText);
+            }
+
+            throw new ProcessException(exceptionMessageBuilder.toString());
+        } catch (IOException e) {
+            throw new ProcessException(String.format("Airtable HTTP request failed [%s]", uri), e);
+        }
+    }
+
+    private URI buildUri(AirtableGetRecordsParameters filter) {
         final UriBuilder uriBuilder = UriBuilder.fromUri(apiUrl).path(baseId).path(tableId);
 
         for (final String field : filter.getFields()) {
@@ -69,25 +94,6 @@ public class AirtableRestService {
         filter.getOffset().ifPresent(offset -> uriBuilder.queryParam("offset", offset));
         filter.getPageSize().ifPresent(pageSize -> uriBuilder.queryParam("pageSize", pageSize));
 
-        final URI uri = uriBuilder.build();
-        try (final HttpResponseEntity response = webClientService.method(StandardHttpRequestMethod.GET)
-                .uri(uri)
-                .header("Authorization", "Bearer " + apiToken)
-                .retrieve()) {
-
-            if (response.statusCode() != 200) {
-                final StringBuilder exceptionMessageBuilder = new StringBuilder("Invalid response. Code: " + response.statusCode());
-
-                final String bodyText = IOUtils.toString(response.body(), StandardCharsets.UTF_8);
-                if (bodyText != null) {
-                    exceptionMessageBuilder.append(" Body: ").append(bodyText);
-                }
-                throw new ProcessException(exceptionMessageBuilder.toString());
-            }
-
-            return IOUtils.toByteArray(response.body());
-        } catch (IOException e) {
-            throw new ProcessException(String.format("Airtable HTTP request failed [%s]", uri), e);
-        }
+        return uriBuilder.build();
     }
 }

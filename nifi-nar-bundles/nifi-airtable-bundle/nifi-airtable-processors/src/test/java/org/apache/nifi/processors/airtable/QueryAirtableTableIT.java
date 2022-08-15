@@ -104,7 +104,9 @@ public class QueryAirtableTableIT {
 
             final List<MockFlowFile> results = runner.getFlowFilesForRelationship(QueryAirtableTable.REL_SUCCESS);
             assertEquals(1, results.size());
-            final String content = results.get(0).getContent();
+            final MockFlowFile flowFile = results.get(0);
+            assertEquals("1", flowFile.getAttribute("record.count"));
+            final String content = flowFile.getContent();
             assertEquals(EXPECTED_RECORD_CONTENT, content);
         }
     }
@@ -123,7 +125,9 @@ public class QueryAirtableTableIT {
 
             final List<MockFlowFile> results = runner.getFlowFilesForRelationship(QueryAirtableTable.REL_SUCCESS);
             assertEquals(1, results.size());
-            final String content = results.get(0).getContent();
+            final MockFlowFile flowFile = results.get(0);
+            assertEquals("2", flowFile.getAttribute("record.count"));
+            final String content = flowFile.getContent();
             assertEquals(EXPECTED_RECORD_CONTENT + EXPECTED_RECORD_CONTENT, content);
         }
     }
@@ -143,9 +147,14 @@ public class QueryAirtableTableIT {
 
             final List<MockFlowFile> results = runner.getFlowFilesForRelationship(QueryAirtableTable.REL_SUCCESS);
             assertEquals(2, results.size());
-            final String firstContent = results.get(0).getContent();
+            final MockFlowFile firstFlowFile = results.get(0);
+            assertEquals("1", firstFlowFile.getAttribute("record.count"));
+            final String firstContent = firstFlowFile.getContent();
             assertEquals(EXPECTED_RECORD_CONTENT, firstContent);
-            final String secondContent = results.get(1).getContent();
+
+            final MockFlowFile secondFlowFile = results.get(1);
+            assertEquals("1", secondFlowFile.getAttribute("record.count"));
+            final String secondContent = secondFlowFile.getContent();
             assertEquals(EXPECTED_RECORD_CONTENT, secondContent);
         }
     }

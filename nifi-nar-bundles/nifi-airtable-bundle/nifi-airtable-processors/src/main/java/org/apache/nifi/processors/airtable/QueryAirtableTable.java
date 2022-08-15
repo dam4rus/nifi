@@ -45,6 +45,7 @@ import org.apache.nifi.annotation.behavior.TriggerSerially;
 import org.apache.nifi.annotation.behavior.TriggerWhenEmpty;
 import org.apache.nifi.annotation.behavior.WritesAttribute;
 import org.apache.nifi.annotation.behavior.WritesAttributes;
+import org.apache.nifi.annotation.configuration.DefaultSettings;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.annotation.lifecycle.OnScheduled;
@@ -92,6 +93,7 @@ import org.apache.nifi.web.client.provider.api.WebClientServiceProvider;
         @WritesAttribute(attribute = "mime.type", description = "Sets the mime.type attribute to the MIME Type specified by the Record Writer."),
         @WritesAttribute(attribute = "record.count", description = "Sets the number of records in the FlowFile.")
 })
+@DefaultSettings(yieldDuration = "35 sec")
 public class QueryAirtableTable extends AbstractProcessor {
 
     static final PropertyDescriptor API_URL = new PropertyDescriptor.Builder()
@@ -357,16 +359,16 @@ public class QueryAirtableTable extends AbstractProcessor {
             throw new ProcessException("Couldn't read records from input", e);
         }
 
-        if (totalRecordCount > 0) {
-            final Map<String, String> newState = new HashMap<>(state.toMap());
-            newState.put(LAST_RECORD_FETCH_TIME, currentRecordFetchDateTime);
-            try {
-                context.getStateManager().setState(newState, Scope.CLUSTER);
-            } catch (IOException e) {
-                throw new ProcessException("Failed to update cluster state", e);
-            }
-        } else {
-            context.yield();
+        if (totalRecordCount == 0) {
+            return;
+        }
+
+        final Map<String, String> newState = new HashMap<>(state.toMap());
+        newState.put(LAST_RECORD_FETCH_TIME, currentRecordFetchDateTime);
+        try {
+            context.getStateManager().setState(newState, Scope.CLUSTER);
+        } catch (IOException e) {
+            throw new ProcessException("Failed to update cluster state", e);
         }
     }
 
