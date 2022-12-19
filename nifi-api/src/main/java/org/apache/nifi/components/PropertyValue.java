@@ -115,6 +115,8 @@ public interface PropertyValue {
      */
     <T extends ControllerService> T asControllerService(Class<T> serviceType) throws IllegalArgumentException;
 
+    <T extends Enum<T> & DescribedValue> T asDescribedValue(Class<T> describedValue);
+
     /**
      * @return a ResourceReference for the configured property value, or <code>null</code> if no value was specified, or if the property references multiple resources.
      * @see #asResources()

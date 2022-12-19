@@ -17,6 +17,7 @@
 package org.apache.nifi.util;
 
 import org.apache.nifi.components.AllowableValue;
+import org.apache.nifi.components.DescribedValue;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.components.ValidationResult;
 import org.apache.nifi.controller.ControllerService;
@@ -244,6 +245,20 @@ public interface TestRunner {
      * @return result
      */
     ValidationResult setProperty(PropertyDescriptor descriptor, AllowableValue value);
+
+    /**
+     * Updates the value of the property with the given PropertyDescriptor to
+     * the specified value IF and ONLY IF the value is valid according to the
+     * descriptor's validator. Otherwise, Assertions.fail() is called, causing the
+     * unit test to fail
+     *
+     * @param descriptor descriptor
+     * @param value allowable valu
+     * @return result
+     */
+    default ValidationResult setProperty(PropertyDescriptor descriptor, DescribedValue value) {
+        return setProperty(descriptor, new AllowableValue(value));
+    }
 
     /**
      * Sets the annotation data.
@@ -773,6 +788,27 @@ public interface TestRunner {
      *
      */
     ValidationResult setProperty(ControllerService service, PropertyDescriptor property, AllowableValue value);
+
+    /**
+     * Sets the given property on the given ControllerService
+     *
+     * @param service to modify
+     * @param property to modify
+     * @param value value to use
+     * @return result
+     *
+     * @throws IllegalStateException if the ControllerService is not disabled
+     * @throws IllegalArgumentException if the given ControllerService is not
+     *             known by this TestRunner (i.e., it has not been added via the
+     *             {@link #addControllerService(String, ControllerService)} or
+     *             {@link #addControllerService(String, ControllerService, Map)} method or
+     *             if the Controller Service has been removed via the
+     *             {@link #removeControllerService(ControllerService)} method.
+     *
+     */
+    default ValidationResult setProperty(ControllerService service, PropertyDescriptor property, DescribedValue value) {
+        return setProperty(service, property, new AllowableValue(value));
+    }
 
     /**
      * Sets the property with the given name on the given ControllerService

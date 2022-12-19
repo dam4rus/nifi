@@ -40,7 +40,7 @@ public class TestStandardAzureCredentialsControllerService {
     public void testValidControllerServiceConfiguration() {
         runner.setProperty(credentialsService,
                 StandardAzureCredentialsControllerService.CREDENTIAL_CONFIGURATION_STRATEGY,
-                StandardAzureCredentialsControllerService.DEFAULT_CREDENTIAL);
+                CredentialCofigurationStrategy.DEFAULT_CREDENTIAL);
         runner.assertValid(credentialsService);
 
         // should still be valid be ignored until CREDENTIAL_CONFIGURATION_STRATEGY is set to MANAGED_IDENTITY
@@ -51,7 +51,7 @@ public class TestStandardAzureCredentialsControllerService {
 
         runner.setProperty(credentialsService,
                 StandardAzureCredentialsControllerService.CREDENTIAL_CONFIGURATION_STRATEGY,
-                StandardAzureCredentialsControllerService.MANAGED_IDENTITY);
+                CredentialCofigurationStrategy.MANAGED_IDENTITY);
         runner.assertValid(credentialsService);
     }
 
@@ -59,7 +59,7 @@ public class TestStandardAzureCredentialsControllerService {
     public void testNotValidControllerServiceBlankManagedIdentityClientId() {
         runner.setProperty(credentialsService,
                 StandardAzureCredentialsControllerService.CREDENTIAL_CONFIGURATION_STRATEGY,
-                StandardAzureCredentialsControllerService.MANAGED_IDENTITY);
+                CredentialCofigurationStrategy.MANAGED_IDENTITY);
         runner.setProperty(credentialsService,
                 StandardAzureCredentialsControllerService.MANAGED_IDENTITY_CLIENT_ID,
                 " ");

@@ -16,6 +16,7 @@
  */
 package org.apache.nifi.controller.repository.scheduling;
 
+import org.apache.nifi.components.DescribedValue;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.components.PropertyValue;
 import org.apache.nifi.components.resource.ResourceReference;
@@ -136,6 +137,11 @@ public class ConnectableProcessContext implements ProcessContext {
 
             @Override
             public <T extends ControllerService> T asControllerService(Class<T> serviceType) throws IllegalArgumentException {
+                return null;
+            }
+
+            @Override
+            public <T extends Enum<T> & DescribedValue> T asDescribedValue(Class<T> describedValue) {
                 return null;
             }
 

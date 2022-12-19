@@ -16,10 +16,12 @@
  */
 package org.apache.nifi.util;
 
+import java.util.Arrays;
 import org.apache.nifi.annotation.behavior.InputRequirement;
 import org.apache.nifi.attribute.expression.language.Query;
 import org.apache.nifi.attribute.expression.language.Query.Range;
 import org.apache.nifi.attribute.expression.language.StandardPropertyValue;
+import org.apache.nifi.components.DescribedValue;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.components.PropertyValue;
 import org.apache.nifi.components.resource.ResourceContext;
@@ -286,6 +288,18 @@ public class MockPropertyValue implements PropertyValue {
             return serviceType.cast(service);
         }
         throw new IllegalArgumentException("Controller Service with identifier " + rawValue + " is of type " + service.getClass() + " and cannot be cast to " + serviceType);
+    }
+
+    @Override
+    public <T extends Enum<T> & DescribedValue> T asDescribedValue(Class<T> describedValue) {
+        ensureExpressionsEvaluated();
+        if (rawValue == null || rawValue.equals("")) {
+            return null;
+        }
+        return Arrays.stream(describedValue.getEnumConstants())
+                .filter(constant -> constant.getValue().equalsIgnoreCase(rawValue))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Invalid " + describedValue.getSimpleName() + ": " + rawValue));
     }
 
     @Override

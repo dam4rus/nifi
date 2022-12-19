@@ -69,6 +69,17 @@ public class AllowableValue implements DescribedValue {
     }
 
     /**
+     * Constructs a new AllowableValue from a DescribedValue implementation
+     *
+     * @param describedValue DescribedValue instance
+     */
+    public AllowableValue(final DescribedValue describedValue) {
+        this.value = describedValue.getValue();
+        this.displayName = describedValue.getDisplayName();
+        this.description = describedValue.getDescription();
+    }
+
+    /**
      * @return the value of this AllowableValue
      */
     @Override

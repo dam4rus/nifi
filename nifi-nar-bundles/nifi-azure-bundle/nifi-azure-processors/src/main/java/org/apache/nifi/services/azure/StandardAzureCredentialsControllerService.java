@@ -17,12 +17,12 @@
 package org.apache.nifi.services.azure;
 
 import com.azure.core.credential.TokenCredential;
+import com.azure.identity.ClientSecretCredentialBuilder;
 import com.azure.identity.DefaultAzureCredentialBuilder;
 import com.azure.identity.ManagedIdentityCredentialBuilder;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.annotation.lifecycle.OnEnabled;
-import org.apache.nifi.components.AllowableValue;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.controller.AbstractControllerService;
 import org.apache.nifi.controller.ConfigurationContext;
@@ -42,20 +42,14 @@ import java.util.List;
 @Tags({"azure", "security", "credentials", "provider", "session"})
 @CapabilityDescription("Provide credentials to use with an Azure client.")
 public class StandardAzureCredentialsControllerService extends AbstractControllerService implements AzureCredentialsService {
-    public static AllowableValue DEFAULT_CREDENTIAL = new AllowableValue("default-credential",
-            "Default Credential",
-            "Uses default credential chain. It first checks environment variables, before trying managed identity.");
-    public static AllowableValue MANAGED_IDENTITY = new AllowableValue("managed-identity",
-            "Managed Identity",
-            "Azure Virtual Machine Managed Identity (it can only be used when NiFi is running on Azure)");
     public static final PropertyDescriptor CREDENTIAL_CONFIGURATION_STRATEGY = new PropertyDescriptor.Builder()
             .name("credential-configuration-strategy")
             .displayName("Credential Configuration Strategy")
             .expressionLanguageSupported(ExpressionLanguageScope.NONE)
             .required(true)
             .sensitive(false)
-            .allowableValues(DEFAULT_CREDENTIAL, MANAGED_IDENTITY)
-            .defaultValue(DEFAULT_CREDENTIAL.toString())
+            .allowableValues(CredentialCofigurationStrategy.class)
+            .defaultValue(CredentialCofigurationStrategy.DEFAULT_CREDENTIAL.getValue())
             .build();
 
     public static final PropertyDescriptor MANAGED_IDENTITY_CLIENT_ID = new PropertyDescriptor.Builder()
@@ -67,7 +61,37 @@ public class StandardAzureCredentialsControllerService extends AbstractControlle
             .required(false)
             .sensitive(true)
             .addValidator(StandardValidators.NON_BLANK_VALIDATOR)
-            .dependsOn(CREDENTIAL_CONFIGURATION_STRATEGY, MANAGED_IDENTITY)
+            .dependsOn(CREDENTIAL_CONFIGURATION_STRATEGY, CredentialCofigurationStrategy.MANAGED_IDENTITY)
+            .build();
+
+    public static final PropertyDescriptor SERVICE_PRINCIPAL_TENANT_ID = new PropertyDescriptor.Builder()
+            .name("service-principal-tenant-id")
+            .displayName("Service Principal Tenant ID")
+            .description("Tenant ID of the Azure Active Directory hosting the Service Principal. The property is required when Service Principal authentication is used.")
+            .sensitive(true)
+            .required(true)
+            .addValidator(StandardValidators.NON_BLANK_VALIDATOR)
+            .dependsOn(CREDENTIAL_CONFIGURATION_STRATEGY, CredentialCofigurationStrategy.SERVICE_PRINCIPAL)
+            .build();
+
+    public static final PropertyDescriptor SERVICE_PRINCIPAL_CLIENT_ID = new PropertyDescriptor.Builder()
+            .name("service-principal-client-id")
+            .displayName("Service Principal Client ID")
+            .description("Client ID (or Application ID) of the Client/Application having the Service Principal. The property is required when Service Principal authentication is used.")
+            .sensitive(true)
+            .required(true)
+            .addValidator(StandardValidators.NON_BLANK_VALIDATOR)
+            .dependsOn(CREDENTIAL_CONFIGURATION_STRATEGY, CredentialCofigurationStrategy.SERVICE_PRINCIPAL)
+            .build();
+
+    public static final PropertyDescriptor SERVICE_PRINCIPAL_CLIENT_SECRET = new PropertyDescriptor.Builder()
+            .name("service-principal-client-secret")
+            .displayName("Service Principal Client Secret")
+            .description("Password of the Client/Application. The property is required when Service Principal authentication is used.")
+            .sensitive(true)
+            .required(true)
+            .addValidator(StandardValidators.NON_BLANK_VALIDATOR)
+            .dependsOn(CREDENTIAL_CONFIGURATION_STRATEGY, CredentialCofigurationStrategy.SERVICE_PRINCIPAL)
             .build();
 
     private static final List<PropertyDescriptor> PROPERTIES;
@@ -76,6 +100,9 @@ public class StandardAzureCredentialsControllerService extends AbstractControlle
         final List<PropertyDescriptor> props = new ArrayList<>();
         props.add(CREDENTIAL_CONFIGURATION_STRATEGY);
         props.add(MANAGED_IDENTITY_CLIENT_ID);
+        props.add(SERVICE_PRINCIPAL_TENANT_ID);
+        props.add(SERVICE_PRINCIPAL_CLIENT_ID);
+        props.add(SERVICE_PRINCIPAL_CLIENT_SECRET);
         PROPERTIES = Collections.unmodifiableList(props);
     }
 
@@ -93,12 +120,15 @@ public class StandardAzureCredentialsControllerService extends AbstractControlle
 
     @OnEnabled
     public void onConfigured(final ConfigurationContext context) {
-        final String configurationStrategy = context.getProperty(CREDENTIAL_CONFIGURATION_STRATEGY).getValue();
+        final CredentialCofigurationStrategy configurationStrategy = context.getProperty(CREDENTIAL_CONFIGURATION_STRATEGY)
+                .asDescribedValue(CredentialCofigurationStrategy.class);
 
-        if (DEFAULT_CREDENTIAL.equals(configurationStrategy)) {
+        if (configurationStrategy == CredentialCofigurationStrategy.DEFAULT_CREDENTIAL) {
             credentials = getDefaultAzureCredential();
-        } else if (MANAGED_IDENTITY.equals(configurationStrategy)) {
+        } else if (configurationStrategy == CredentialCofigurationStrategy.MANAGED_IDENTITY) {
             credentials = getManagedIdentityCredential(context);
+        } else if (configurationStrategy == CredentialCofigurationStrategy.SERVICE_PRINCIPAL) {
+            credentials = getServicePrincipalCredential(context);
         } else {
             final String errorMsg = String.format("Configuration Strategy [%s] not recognized", configurationStrategy);
             getLogger().error(errorMsg);
@@ -117,6 +147,17 @@ public class StandardAzureCredentialsControllerService extends AbstractControlle
                 .clientId(clientId)
                 .build();
         return managedIdentityCredential;
+    }
+
+    private TokenCredential getServicePrincipalCredential(final ConfigurationContext context) {
+        final String tenantId = context.getProperty(SERVICE_PRINCIPAL_TENANT_ID).getValue();
+        final String clientId = context.getProperty(SERVICE_PRINCIPAL_CLIENT_ID).getValue();
+        final String clientSecret = context.getProperty(SERVICE_PRINCIPAL_CLIENT_SECRET).getValue();
+        return new ClientSecretCredentialBuilder()
+                .tenantId(tenantId)
+                .clientId(clientId)
+                .clientSecret(clientSecret)
+                .build();
     }
 
     @Override
