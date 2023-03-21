@@ -58,6 +58,7 @@ env:
     -pl -:nifi-stateless-assembly
     -pl -:nifi-stateless-processor-tests
     -pl -:nifi-stateless-system-test-suite
+    -pl -:nifi-stateless-bootstrap
     -pl -:nifi-system-test-suite
     -pl -:nifi-nar-provider-assembly
   MAVEN_VERIFY_COMMAND: >-
